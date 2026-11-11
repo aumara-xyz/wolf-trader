@@ -9,6 +9,7 @@ export const sourceUrl = (url?: string) => url?.startsWith('https://') ? url : u
 const time = (date?: string) => date && Number.isFinite(Date.parse(date)) ? new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined
 
 export interface WolfSurfaceProps {
+  intelligence?: ReactNode;
   markets: Market[]; portfolio: Portfolio | null; activity: Activity[]; expanded: string | null;
   drafts: Record<string, Draft>; quotes: Record<string, Quote | undefined>; quoteErrors: Record<string, string | undefined>;
   quoting: string | null; committing: string | null; pendingOperation: string | null; now: number;
@@ -24,9 +25,9 @@ export interface WolfSurfaceProps {
 /** Pure presentation. The carrier owns transport, retained drafts and durable domain facts. */
 export function WolfSurface(p: WolfSurfaceProps) {
   const positions = p.portfolio?.positions ?? []
-  const subtitle = p.dataState === 'live' ? 'Live market data · Demo money' : p.dataState === 'loading' ? 'Connecting to markets · Demo money' : 'Saved market data · Demo money'
+  const subtitle = p.dataState === 'live' ? 'Live markets · Paper capital' : p.dataState === 'loading' ? 'Connecting to markets · Demo money' : 'Saved market data · Demo money'
   return <section className="wolf-surface wolf-theme" aria-label="Wolf prediction markets">
-    <div className="wolf-lane-header"><AppHeader title="Wolf" eyebrow={subtitle} tone="violet" /></div>
+    <div className="wolf-lane-header"><AppHeader title="Wolf Trader" eyebrow={subtitle} tone="violet" /></div>
     <div className="wolf-content">
       {p.serviceError && <InlineMessage kind="error">{p.serviceError} <button className="wolf-text-action" onClick={p.onRefresh}>Retry</button></InlineMessage>}
       {p.notice && <div className="wolf-notice" role="status">{p.notice}</div>}
@@ -51,6 +52,7 @@ export function WolfSurface(p: WolfSurfaceProps) {
           <details className="wolf-details"><summary>Activity <span>{p.activity.length}</span></summary><ActivityList items={p.activity} /></details>
         </PortalButton></PortalCell>
       </PortalGrid>
+      {p.intelligence}
       <div className="wolf-section-heading"><span>Explore markets</span><button className="wolf-text-action" onClick={p.onRefresh} aria-label="Refresh live markets">Refresh <span aria-hidden="true">↻</span></button></div>
       {p.dataState === 'loading' && !p.markets.length ? <div className="wolf-loading" aria-live="polite"><span className="wolf-orbit"><AkIcon name="aura" /></span>Finding real markets…</div> : null}
       {p.marketError && <InlineMessage kind="error">{p.marketError} <button className="wolf-text-action" onClick={p.onRefresh}>Try again</button></InlineMessage>}

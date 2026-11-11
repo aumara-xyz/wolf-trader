@@ -102,7 +102,7 @@ export function createLedger({ dataDir, markets, now = Date.now }) {
     run('INSERT INTO quotes VALUES(?,?)', quote.id, JSON.stringify(quote));
     return { quote };
   }
-  async function commitDemo(input) {
+  async function commitDemo(input, { beforeEffect } = {}) {
     const id = validateOperation(input.operationId);
     const requestDigest = digest({ type: 'commitDemo', quoteId: input.quoteId, expectedRevision: input.expectedRevision });
     const prior = replay(id, requestDigest);
@@ -114,12 +114,12 @@ export function createLedger({ dataDir, markets, now = Date.now }) {
     }
     const pending = { requestDigest, promise: null };
     inFlight.set(id, pending);
-    pending.promise = Promise.resolve().then(() => performCommit(input, id, requestDigest)).finally(() => {
+    pending.promise = Promise.resolve().then(() => performCommit(input, id, requestDigest, beforeEffect)).finally(() => {
       if (inFlight.get(id) === pending) inFlight.delete(id);
     });
     return pending.promise;
   }
-  async function performCommit(input, id, requestDigest) {
+  async function performCommit(input, id, requestDigest, beforeEffect) {
     const quote = readJSON(get('SELECT json FROM quotes WHERE id=?', String(input.quoteId)));
     if (!quote) fail('QUOTE_NOT_FOUND', 'This quote is no longer available.', 404);
     if (!Number.isInteger(input.expectedRevision) || input.expectedRevision !== quote.accountRevision) fail('REVISION_CONFLICT', 'The account changed. Request a new quote.', 409);
@@ -134,6 +134,12 @@ export function createLedger({ dataDir, markets, now = Date.now }) {
     return tx(() => {
       const repeated = replay(id, requestDigest);
       if (repeated) return repeated;
+      // Trusted governor only; HTTP inputs never supply this callback. No await
+      // separates the final mandate check from the atomic financial effect.
+      if (beforeEffect) {
+        const checked = beforeEffect({ market, book: rawBook, pricing: serializePricing(pricing) });
+        if (checked?.then) fail('ASYNC_GUARD_REFUSED', 'The final order guard must be synchronous.', 409);
+      }
       const a = account();
       if (a.epoch !== quote.accountEpoch || a.revision !== quote.accountRevision) fail('REVISION_CONFLICT', 'The account changed. Request a new quote.', 409);
       if (now() >= Date.parse(quote.expiresAt)) fail('QUOTE_EXPIRED', 'The quote expired. Review a new quote.', 409);

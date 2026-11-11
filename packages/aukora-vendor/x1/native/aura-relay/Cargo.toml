@@ -1,0 +1,22 @@
+[package]
+name = "aura-relay"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+mv-abi = { path = "../mv-abi" }
+
+# Mirrored by build.mjs, which calls rustc directly for path-independent bytes.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+# Standalone workspace until native/Cargo.toml lists this crate. Native review
+# work must not edit the existing production workspace manifest.
+[workspace]

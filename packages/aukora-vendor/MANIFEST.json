@@ -1,0 +1,188 @@
+{
+  "schema": "wolf-vendor/v1",
+  "source": {
+    "repository": "https://github.com/aumara-xyz/aukora-x1",
+    "commit": "6376f714c0999c26eff7bc1944fbf9d32dc147f2",
+    "prefix": "dsh-plugin-desktop"
+  },
+  "x61": {
+    "repository": "https://github.com/aumara-xyz/aukora-x6.1",
+    "commit": "bf21d76952c205bc593f1088d992806e7ad8346f",
+    "note": "The three selected binaries are byte-identical to apps/web/public/cells in this inspected X6.1 tree."
+  },
+  "generated": "src/*.mjs generated from adjacent unchanged TypeScript with TypeScript 6.0.3; only local .ts import suffixes rewritten to .mjs.",
+  "files": [
+    {
+      "path": "src/aukora-canonical.ts",
+      "sha256": "e13325a72c2d9a446154a187c1b3b7552f9eebe7e25bf9e54468bf3287d47ae0"
+    },
+    {
+      "path": "src/kira-core.ts",
+      "sha256": "83c81c2784512301bf36ac42cf20e37c385654a929dc5d19ff62420196b6c4b0"
+    },
+    {
+      "path": "src/kira-contract.ts",
+      "sha256": "460fb95d223425759743d86631845217384269326a1467a6bac63062cce26e78"
+    },
+    {
+      "path": "src/aukora-nostr.ts",
+      "sha256": "d448b1d71602806e2839091070d6ca8a47ff5a16df80914ae650dd1595d6c6fd"
+    },
+    {
+      "path": "src/aukora-aura-relay.ts",
+      "sha256": "6eaeb0afb861e77b940aeaf52cfb600084323ad9926eab238a311cb8961c71a9"
+    },
+    {
+      "path": "scripts/aukora-cell-admission.mjs",
+      "sha256": "f86867c55c41138f1b98bc629d86df751760caacf248a8e1db5aeefa52dfa8b9"
+    },
+    {
+      "path": "scripts/strip-wasm-exports.mjs",
+      "sha256": "a17506acc904c8e698e9cd30cc47f1b0f3cfbc7bbd41e8e29d9361917d04b019"
+    },
+    {
+      "path": "scripts/build-kira-core.mjs",
+      "sha256": "fd3c34d1da6d954fce12f8ca5d01ee58e82f6b26c176b1fb585667f895b433a5"
+    },
+    {
+      "path": "assets/kira-core.wasm",
+      "sha256": "4d1be5b5eb8cb2ba943cac58aff3e5ad46f3c3e779af3cc3c1778282f32caa3e"
+    },
+    {
+      "path": "assets/nostr-core.wasm",
+      "sha256": "1b00e08461e6c2e9a99e5d32a93389d633aeb776a5d3e4a3e2b173cd6ce82530"
+    },
+    {
+      "path": "assets/aura-relay.wasm",
+      "sha256": "65eb44c909d0ef97d9f5160a6b90fde54974c42db95af70366428bebd5080dd5"
+    },
+    {
+      "path": "tests/vectors/nostr-core-v1.json",
+      "sha256": "0d84a4836f044b2e6efed3a5e205cb42923ccb04dcac6e732436d1cd8aaf4562"
+    },
+    {
+      "path": "tests/vectors/aura-relay-v1.json",
+      "sha256": "ac65345739b58c253eb8fd8a81b4475e40235f136e92b07082ede3094ae593b5"
+    },
+    {
+      "path": "native/kira-core/Cargo.toml",
+      "sha256": "dc4176fd3742ad79ee80d687a297e6a375016bc3524cc96168721e75d0370458"
+    },
+    {
+      "path": "native/kira-core/meter-vectors.json",
+      "sha256": "b5ffcfffc73e006e04acd2c5d13fcecf58f6425323534a852f40473004d07360"
+    },
+    {
+      "path": "native/kira-core/src/lib.rs",
+      "sha256": "684fcdf1538a1e0c6c66cf97563f718a947a5664fd880535897cbb9899ffdd55"
+    },
+    {
+      "path": "native/nostr-core/.gitignore",
+      "sha256": "b53ee26e6ff1da219b0563333a76d2c9ec19eec713d6ee54e11a1edacb0e9f3d"
+    },
+    {
+      "path": "native/nostr-core/Cargo.lock",
+      "sha256": "d3f01a7208d66bb76c44b7093fce0e115e1bfa8ee96c789d128583c9fef12b35"
+    },
+    {
+      "path": "native/nostr-core/Cargo.toml",
+      "sha256": "f07dea9b6fc9d505ac5d39f4827ca2dbd27907a3b7ef019b57a7732d7ca82590"
+    },
+    {
+      "path": "native/nostr-core/README.md",
+      "sha256": "9f542c32285c67dd3e6ab4abe7acc9d56fa629131366f7726df2d5a51850deb8"
+    },
+    {
+      "path": "native/nostr-core/build.mjs",
+      "sha256": "8a005e6c0f24b968c486f98007802867ba4247ad55e6e3b80e34949f3309242b"
+    },
+    {
+      "path": "native/nostr-core/generate-vectors.mjs",
+      "sha256": "2bf24c4e94b9a9be347f19cd884012136e4fee8de7532312de9266e5dd16424b"
+    },
+    {
+      "path": "native/nostr-core/src/c1.rs",
+      "sha256": "38e44c3587ce01d873b39129aebdd7436b2d2503538044e6cdad074bdcfd8f10"
+    },
+    {
+      "path": "native/nostr-core/src/event.rs",
+      "sha256": "31cd760b02374e84b41d8ef518a09d7b770b28acb576bb7fee767ae91cc3d290"
+    },
+    {
+      "path": "native/nostr-core/src/keys.rs",
+      "sha256": "51074a92b05d9e8dc23a4d5ddb969a1ccf83e91e3298a95868e65a0f21664c15"
+    },
+    {
+      "path": "native/nostr-core/src/lib.rs",
+      "sha256": "ca79b60584f44534713dcb583470e2a331e2b6dd7e2926bc2b0627246518bf8f"
+    },
+    {
+      "path": "native/nostr-core/src/nip44.rs",
+      "sha256": "a7418fbc17001df9595c7fe3a2c3fcb8b9c9aefb531fac664cc83a048c5826d8"
+    },
+    {
+      "path": "native/nostr-core/src/nip59.rs",
+      "sha256": "bb4cfe7463e9ba28659aabfad1a75b748fbcd4e3c70b19167ec1dd522226cc59"
+    },
+    {
+      "path": "native/aura-relay/.gitignore",
+      "sha256": "b53ee26e6ff1da219b0563333a76d2c9ec19eec713d6ee54e11a1edacb0e9f3d"
+    },
+    {
+      "path": "native/aura-relay/Cargo.lock",
+      "sha256": "ebc9341d26dcfe74449a8c9b8921eb895d2995923b9c41546bf7193557f55095"
+    },
+    {
+      "path": "native/aura-relay/Cargo.toml",
+      "sha256": "1249936603e550557ddbe8f0bee7a180390cb18e82bab497738c6db9a1493b94"
+    },
+    {
+      "path": "native/aura-relay/README.md",
+      "sha256": "3ed451abeb806df64d1124d384a3d32b72a3618909191da4291cfb4f6d14b509"
+    },
+    {
+      "path": "native/aura-relay/build.mjs",
+      "sha256": "6e5c30e37a8f49c84ea85e7fd14aee235d685dd5d44433cf21318ad37c178e54"
+    },
+    {
+      "path": "native/aura-relay/src/lib.rs",
+      "sha256": "8eb6d36dd5b7bbadbcca26e449041450d8414a0a39a44183d691f92bb31ec53d"
+    },
+    {
+      "path": "native/aura-relay/src/tests.rs",
+      "sha256": "8e860829c947cedd8d3dc2b8f36a4948b548ef4eae088917789c4b2834dfe75d"
+    },
+    {
+      "path": "native/mv-abi/Cargo.toml",
+      "sha256": "75575d7ca89614bd8df30a43cf95b415266baed2ef9b52a9c9bec735b21e8760"
+    },
+    {
+      "path": "native/mv-abi/PROVENANCE.md",
+      "sha256": "a1e2989b8402b2fc476a4d1e05cdc581cdfa9fd7524ccda009f0d0d17fa7ccf2"
+    },
+    {
+      "path": "native/mv-abi/src/lib.rs",
+      "sha256": "8cfe90a9058195c70df156b66d97fcaca744d5919ed29250bc48bfd38f86c283"
+    },
+    {
+      "path": "native/mv-meter/.keep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "native/mv-meter/README.md",
+      "sha256": "0317a2bb336d5e85e410b5e65af7b3d8d57f4ac9025682b70ef44cd6c457ace3"
+    },
+    {
+      "path": "native/mv-meter/build-metered-cell.mjs",
+      "sha256": "bed5cf010414f6a2b0b4125cece64fcaeb1e3ca4a041ecb3836dc5518773d678"
+    },
+    {
+      "path": "native/mv-meter/meter.mjs",
+      "sha256": "0c8fcc36550a6c379317780f3f063cdbb04ce514fd64a43dc3a9a8781dfd2714"
+    },
+    {
+      "path": "native/mv-cargo/build-cargo-metered-cell.mjs",
+      "sha256": "4aa851fa5423ea19fcb62e8fc27d451c1f5e5194ca7a4cdc6e0399180ac23de7"
+    }
+  ]
+}

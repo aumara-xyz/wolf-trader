@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "cases": [
+    {
+      "name": "meter-smoke-0",
+      "op": "kira.ping",
+      "input": {},
+      "expect": {
+        "pong": true
+      }
+    }
+  ]
+}

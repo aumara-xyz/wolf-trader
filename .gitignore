@@ -29,3 +29,11 @@ tmp/
 .idea/
 playwright-report/
 test-results/
+
+# Local Python/model runtime (setup stores it outside the checkout)
+__pycache__/
+.venv/
+*.pyc
+*.onnx
+*.safetensors
+*.gguf

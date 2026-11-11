@@ -1,0 +1,152 @@
+{
+  "schema": "wolf-provider-pins/v1",
+  "reviewedAt": "2026-11-11",
+  "dexter": {
+    "repository": "https://github.com/virattt/dexter",
+    "revision": "534f6be455523c5926eba72bdaf4f914555be5c9",
+    "license": "MIT",
+    "runtime": "Bun",
+    "model": "ollama:qwen3:1.7b",
+    "modelDigest": "8f68893c685c3ddff2aa3fffce2aa60a30bb2da65ca488b61fff134a4d1730e7",
+    "licenseNote": "Upstream README declares MIT; no separate LICENSE file is present at this revision. Source is installed from upstream, not bundled.",
+    "sourceManifestDigest": "77a9c208de5eba5d341e14b35a518ed1c1f5c7a37b7dad20c64d9fa062ffc72d",
+    "modelManifest": {
+      "schemaVersion": 2,
+      "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "config": {
+        "mediaType": "application/vnd.docker.container.image.v1+json",
+        "digest": "sha256:517ccaff02fe9f99718ab2f478e611aa2813c36263eeed86c2427bc122d14ad8",
+        "size": 487
+      },
+      "layers": [
+        {
+          "mediaType": "application/vnd.ollama.image.model",
+          "digest": "sha256:3d0b790534fe4b79525fc3692950408dca41171676ed7e21db57af5c65ef6ab6",
+          "size": 1359279776
+        },
+        {
+          "mediaType": "application/vnd.ollama.image.template",
+          "digest": "sha256:ae370d884f108d16e7cc8fd5259ebc5773a0afa6e078b11f4ed7e39a27e0dfc4",
+          "size": 1723
+        },
+        {
+          "mediaType": "application/vnd.ollama.image.license",
+          "digest": "sha256:d18a5cc71b84bc4af394a31116bd3932b42241de70c77d2b76d69a314ec8aa12",
+          "size": 11338
+        },
+        {
+          "mediaType": "application/vnd.ollama.image.params",
+          "digest": "sha256:cff3f395ef3756ab63e58b0ad1b32bb6f802905cae1472e6a12034e4246fbbdb",
+          "size": 120
+        }
+      ]
+    },
+    "modelLicense": "Apache-2.0"
+  },
+  "kronos": {
+    "repository": "https://github.com/shiyu-coder/Kronos",
+    "revision": "67b630e67f6a18c9e9be918d9b4337c960db1e9a",
+    "license": "MIT",
+    "model": {
+      "repository": "NeoQuasar/Kronos-mini",
+      "revision": "f4e68697d9d5aed55cef5c96aabc3376bcad9f81",
+      "files": {
+        "model.safetensors": {
+          "sha256": "a7d5f37e2e9fbd9891f7d7d4f72574512dd1f704fee14223e0a8cd0fbf54197c",
+          "bytes": 16440776
+        },
+        "config.json": {
+          "sha256": "70daca2cb11e3a979dd6b8ac12ee08e2aace877acf28f5b8dfb4fe5609736201",
+          "bytes": 225
+        },
+        "README.md": {
+          "sha256": "73fccc29fd1cda62e7e2b0467c0d2b6f5b551b46a4f4cac0c7bca51c0a0b4697",
+          "bytes": 8841
+        }
+      }
+    },
+    "tokenizer": {
+      "repository": "NeoQuasar/Kronos-Tokenizer-2k",
+      "revision": "26966d0035065a0cae0ebad7af8ece35bc1fb51c",
+      "files": {
+        "model.safetensors": {
+          "sha256": "b97ec46b3b72160509e289183eaf7bdf5f0dac5bb9b49522f6d46638a99a8717",
+          "bytes": 15842376
+        },
+        "config.json": {
+          "sha256": "0b30a443affb03e05a876a083857de9164f899feb7b4d261da02c485c9a3e3b6",
+          "bytes": 301
+        },
+        "README.md": {
+          "sha256": "4fedbedb718884f0bb39182511a000e37b298440743817b0458bf6666263ef70",
+          "bytes": 8861
+        }
+      }
+    }
+  },
+  "laya": {
+    "repository": "https://github.com/NandhaKishorM/laya",
+    "revision": "ffc142012af63d015fa19f05f29f9c5ff329a2cc",
+    "package": "laya==0.4.12",
+    "license": "Apache-2.0",
+    "model": {
+      "repository": "convaiinnovations/laya",
+      "revision": "7b928d828b7b0e022f929d9bd2e44165aa270148",
+      "files": {
+        "model.onnx": {
+          "sha256": "e583e51f4263508427c1fb06f941ce726244a2148c0f39ff3b8deca4bd4ad3ab",
+          "bytes": 2732417
+        },
+        "model.onnx.data": {
+          "sha256": "afcc11e72b59193fbec6e5dc8b693c9baa81cf66bec53279cefd687b318c3199",
+          "bytes": 1685175296
+        },
+        "rl_agent_config.json": {
+          "sha256": "ae287b56bbcf5f8c4f4541ae9dfd00c914c4c48b940b8398c3058af37ba92bbd",
+          "bytes": 745
+        },
+        "tokenizer/tokenizer.json": {
+          "sha256": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30",
+          "bytes": 3583228
+        },
+        "tokenizer/tokenizer_config.json": {
+          "sha256": "50044de60daaa73df97d262e15a40d4faf0160e7d742df64b377877a1320dd12",
+          "bytes": 308
+        }
+      },
+      "checkpointFiles": {
+        "model.safetensors": {
+          "sha256": "891102d372688fc2a094dac56a384bc537b87c63f21f9f3dac0be2b7cbc8d86c",
+          "bytes": 842609210
+        },
+        "rl_agent_config.json": {
+          "sha256": "ae287b56bbcf5f8c4f4541ae9dfd00c914c4c48b940b8398c3058af37ba92bbd",
+          "bytes": 745
+        },
+        "encoder/config.json": {
+          "sha256": "bf3ab80598fdccf414855a2ce80f22859e4492d06ca8a62ddd1cfb63972f8979",
+          "bytes": 2083
+        },
+        "tokenizer/tokenizer.json": {
+          "sha256": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30",
+          "bytes": 3583228
+        },
+        "tokenizer/tokenizer_config.json": {
+          "sha256": "50044de60daaa73df97d262e15a40d4faf0160e7d742df64b377877a1320dd12",
+          "bytes": 308
+        }
+      }
+    }
+  },
+  "jev": {
+    "endpoint": "https://api.typesafe.ai/v1/systemone",
+    "documentation": "https://docs.typesafe.ai/api/system-one",
+    "model": "jev-1.13.0",
+    "license": "Hosted API; own credential required"
+  },
+  "nautilus": {
+    "repository": "https://github.com/nautechsystems/nautilus_trader",
+    "package": "nautilus_trader==1.231.0",
+    "license": "LGPL-3.0-or-later"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "repository": "https://github.com/aumara-xyz/aukora-x6.1",
+  "commit": "bf21d76952c205bc593f1088d992806e7ad8346f",
+  "role": "Exact X6.1 Cordis composition and dependency lifecycle closure",
+  "files": [
+    {
+      "source": "vendor/cordis/src/context.ts",
+      "file": "cordis/src/context.ts",
+      "sha256": "fd5a4f1d2bc6b8b34729c87fda7639a07759ce07fb070ab05374acbcb9ccdc0e"
+    },
+    {
+      "source": "vendor/cordis/src/events.ts",
+      "file": "cordis/src/events.ts",
+      "sha256": "a464c843822da4eb31a8d998c5e2216a817b8a7dfeacb6e1aab7f830e7320d6b"
+    },
+    {
+      "source": "vendor/cordis/src/fiber.ts",
+      "file": "cordis/src/fiber.ts",
+      "sha256": "b64c3a97f15f0381479dcf3d25965e56dc4cecfa4a0881fc055a49f65b9945df"
+    },
+    {
+      "source": "vendor/cordis/src/index.ts",
+      "file": "cordis/src/index.ts",
+      "sha256": "071fb226e9a21556625e4391b28e6641b9b34b1cd402155246e0437993d8b740"
+    },
+    {
+      "source": "vendor/cordis/src/logger.ts",
+      "file": "cordis/src/logger.ts",
+      "sha256": "a6836ace311d0bd1abc9c1211cffcba73eff61c89ca47641efd82d91747401cb"
+    },
+    {
+      "source": "vendor/cordis/src/reflect.ts",
+      "file": "cordis/src/reflect.ts",
+      "sha256": "047f01fcdef2aa34b4afc39deaf18c16733fabd2a5ef0d55e5c2595b22caadfd"
+    },
+    {
+      "source": "vendor/cordis/src/registry.ts",
+      "file": "cordis/src/registry.ts",
+      "sha256": "34bbd60ae502b4f85201c204afb52a9acabde6878d9278493478c1b2183debd3"
+    },
+    {
+      "source": "vendor/cordis/src/service.ts",
+      "file": "cordis/src/service.ts",
+      "sha256": "614205c6ce7cf1a057b8b352e96aa4fcd734c967a3d2283a126c9c61f268e3be"
+    },
+    {
+      "source": "vendor/cordis/src/utils.ts",
+      "file": "cordis/src/utils.ts",
+      "sha256": "c68bab85514ebd8cb08227367ea306b0109a214cd10965c497474eeadaaca756"
+    },
+    {
+      "source": "vendor/cordis/LICENSE",
+      "file": "cordis/LICENSE",
+      "sha256": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7"
+    },
+    {
+      "source": "vendor/cordis/package.json",
+      "file": "cordis/package.json",
+      "sha256": "aa2f620ef996fa06e72471d40f8ce996533de7d21f9fca8c930c16e45725701c"
+    },
+    {
+      "source": "vendor/cosmokit/src/array.ts",
+      "file": "cosmokit/src/array.ts",
+      "sha256": "cf4de899ecffd66a90d8cef6f4c7d127d31f77f776d8e173d41c30d2d7632cf7"
+    },
+    {
+      "source": "vendor/cosmokit/src/index.ts",
+      "file": "cosmokit/src/index.ts",
+      "sha256": "1087da74b9c461984e547d524ee766eebcf329a78e4720bff5b60a004ccf6e8c"
+    },
+    {
+      "source": "vendor/cosmokit/src/misc.ts",
+      "file": "cosmokit/src/misc.ts",
+      "sha256": "117617943074ea57c15f216905dacd2f6d1c4c2ff16586f97a7a7a87dbf2141f"
+    },
+    {
+      "source": "vendor/cosmokit/src/string.ts",
+      "file": "cosmokit/src/string.ts",
+      "sha256": "5564272b3e15e49235cbe3a8b453f27306baf282d23a893982841670f65d3c04"
+    },
+    {
+      "source": "vendor/cosmokit/src/time.ts",
+      "file": "cosmokit/src/time.ts",
+      "sha256": "49957c4608465a1fbd738186a92c47fffcd1fc4ba59dbf89524f8a773fe16fe2"
+    },
+    {
+      "source": "vendor/cosmokit/src/types.ts",
+      "file": "cosmokit/src/types.ts",
+      "sha256": "cc49c12e4a637f7b0754ff78a8299e9c42fa40ee8c678550af0c538a80146a92"
+    },
+    {
+      "source": "vendor/cosmokit/src/volatile.ts",
+      "file": "cosmokit/src/volatile.ts",
+      "sha256": "937433215595f89da249ec7cabb89e331ff4135a40c6686a95666d2095315e55"
+    },
+    {
+      "source": "vendor/cosmokit/LICENSE",
+      "file": "cosmokit/LICENSE",
+      "sha256": "034fb52b1d57360ecbae6cb1632a88f86fd7c3d3f5631a5f082710203dda0be7"
+    },
+    {
+      "source": "vendor/cosmokit/package.json",
+      "file": "cosmokit/package.json",
+      "sha256": "539291e961fd901dbe583abb71ba87537bfb2db518f361d825138a3a4bb3f960"
+    }
+  ]
+}

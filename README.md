@@ -1,89 +1,100 @@
 # Wolf Trader
 
-## Native demo
+Wolf Trader 0.2 is a standalone AUKORA trading foundation: public market research, local specialist models, attributed memory, verifiable evidence, and automatic trading with simulated money. Its single center pane uses AUKORA's Spatial portals and header primitives. When embedded, the host's existing Auma conversation stays in place; Wolf adds no second chat or split-pane shell.
 
-Wolf is a **single center-pane app** using AUKORA's actual Spatial portals and header language, live public Polymarket data, and a durable $1,000 simulated account. The existing Auma chat stays in the host; it opens and updates Wolf through a narrow integration. The standalone preview renders only the Wolf surface. Buy, add, reduce and cash out inside the same portal.
+The implemented loop is **observe → recall → investigate → record → propose → enforce a standing paper mandate → simulate → evaluate**. Research and model output cannot change the mandate's capital limits. This repository runs independently of the full Genesis/X1/X2/X6 checkout; selected AUKORA source closures, pins and notices are included.
 
-Requires Node **24.9+**. Clone this private repository with an authorized GitHub account:
+## Run it
+
+Requires Node **24.9+**, npm and an authorized GitHub account for this private repository.
 
 ```sh
 git clone https://github.com/aumara-xyz/wolf-trader.git
 cd wolf-trader
-```
-
-Then install and run:
-
-```sh
 npm ci
 npm run wolf:build
 npm run wolf:start
 ```
 
-Open `http://127.0.0.1:4318/`. To install the dedicated macOS app:
+Open **http://127.0.0.1:4328/**. Public market access, paper accounts, memory/evidence and the quote strategy work without model keys. Missing specialist installations appear as unavailable.
+
+To install the free local specialists, first install `uv`, Bun and Ollama, with Git available. Setup downloads pinned models and dependencies outside the repository; allow several GB of disk space and additional space for Python packages.
+
+```sh
+npm run wolf:setup
+npm run wolf:setup -- --verify
+```
+
+Verification executes actual local models and replay. It uses public Coinbase candles plus an explicitly labeled classification fixture; it does not measure trading skill. Setup never calls the paid Jev API. Run `npm run wolf:setup -- --help` for individual providers and an alternate runtime directory.
+
+For the macOS application, install Apple's command-line developer tools, then:
 
 ```sh
 npm run wolf:install
-open "$HOME/Applications/AUKORA Wolf.app"
+open "$HOME/Applications/Wolf Trader.app"
 ```
 
-Quit an existing Wolf instance before reinstalling. The app bundles the built frontend and service; it uses the machine's Node runtime. Its SQLite account lives outside Git in `~/Library/Application Support/AUKORA Wolf`. `WOLF_DATA_DIR` and `WOLF_PORT` select an isolated test instance.
+Quit an existing Wolf instance before replacing it. The installed application bundles the service and frontend and uses the machine's Node runtime. Account data lives in `~/Library/Application Support/Wolf Trader` on macOS or `~/.local/share/wolf-trader` elsewhere. `WOLF_DATA_DIR`, `WOLF_PORT` and `WOLF_PROVIDER_RUNTIME_DIR` select separate data, service port and model locations. Model weights, private identities, keys and account databases do not belong in Git.
 
-The demo executes only verified zero-fee, supported binary markets. Other markets can be inspected but are browse-only. Automatic final settlement is not implemented. All transactions are simulations; the service has no live order or wallet route.
+## AUKORA mechanisms in the running pipeline
 
-The service includes guided market-research tools that use actual public records without a model key. The website's resident Auma can use these tools and deliver market references to Wolf; Wolf does not create a separate chat. An optional server-side `WOLF_DEEPSEEK_API_KEY` (or the existing `AUKORA_DEMO_DEEPSEEK_API_KEY` environment variable) enables the service's configured DeepSeek research path. Never put keys in browser code, Git or a shared bundle.
+| Component | Implemented use |
+| --- | --- |
+| **Kira** | Pinned metered Wasm classifies memory, clamps model/source authority, ranks bounded recall, and checks candidate scope permissions. Corrections supersede earlier notes while retaining their evidence. |
+| **Nostr core** | Actual BIP-340 signatures and NIP-01 event verification bind observations, research and paper execution records to a fresh local identity. Individual events can be explicitly imported/exported; external claims remain untrusted. |
+| **Aura** | The pinned cell computes the evidence history's RFC6962 Merkle commitment. Signed checkpoints support cold verification and comparison with an independently retained prefix. |
+| **X6.1 Cordis** | The actual dependency lifecycle composes market, ledger, memory, provider, research and autonomy services. Unloading a required service pauses autonomous work. |
+| **Spatial UI** | Shared portal, typography, palette and header primitives inside one controlled app surface. The host owns Auma and navigation. |
 
-Checks:
+These are invoked implementations, with source manifests and retained licenses in [aukora-vendor](./packages/aukora-vendor/README.md), [runtime-vendor](./packages/runtime-vendor/SOURCE.json) and [spatial-ui](./packages/spatial-ui/PROVENANCE.md). Only the selected Wasm cells have their metered, zero-import execution boundary; the whole Node application is not contained by that boundary.
+
+## Specialist providers
+
+| Provider | Actual role | Availability and limit |
+| --- | --- | --- |
+| **Laya** | Local structured classification of source evidence against contract rules. | Pinned English checkpoint; classification confidence is not event probability. |
+| **Kronos mini** | Local BTC/ETH candle-path forecasts from complete public Coinbase candles. | Underlying-price forecasts; no calibrated conversion to Polymarket odds. |
+| **Dexter + Qwen3** | Investigation over the supplied, attributed source records with local model inference. | Pinned Dexter source via Bun and local Ollama model; explicitly selected research, not unrestricted browsing. |
+| **Jev** | Hosted structured semantic judgments. | Optional, explicitly selected, paid provider; requires `WOLF_JEV_API_KEY` and `WOLF_ALLOW_PAID_PROVIDERS=1`. |
+| **NautilusTrader** | Historical underlying-asset replay with frozen delayed orders and fees. | BTC/ETH replay, separate from Polymarket order-book simulation. |
+
+[Provider pins](./packages/providers/pins.json) and [locked Python dependencies](./workers/requirements.lock) identify the artifacts. Providers receive bounded research inputs, not ledger or order-submission tools.
+
+## Research, tracking and automatic paper trading
+
+Wolf retrieves canonical Polymarket contracts, source rules and executable public books. It tracks Federal Register presidential-document metadata/abstracts and accepts explicit imports of Trump statements or other public observations from original Truth Social, White House, Federal Register and GovInfo URLs. Imported text is labeled user-supplied and not independently fetched. Source revisions remain linked, repeated sources do not become independent confirmations, and topical overlap never establishes an outcome.
+
+An explicitly armed paper mandate sets exact markets, strategy version, expiry, exposure, turnover, order-count, freshness and loss-stop conditions. Eligible actions then run **without approving each trade**. The deterministic governor checks again immediately before the ledger effect. Pause/Stop invalidate queued actions; a restart pauses and reconciles prior operations before explicit rearming. Existing positions remain; a stop threshold cannot guarantee an exit or a maximum loss.
+
+The executable strategies are a quote-momentum baseline and a Kronos directional strategy using an owner-reviewed exact market/outcome/asset/strike/horizon/rule-version mapping. Mapping revocation and stale or changed evidence refuse execution. The event-probability strategy requires a separately approved, calibrated forecast artifact; none is supplied by default. An asset forecast, social statement or classifier score cannot silently become such an artifact. Details: [standing paper mandates](./packages/autonomy/README.md).
+
+Candidate APIs freeze an exact probability-combination version, record dated caller-supplied evaluation cases, compare Brier scores with the market baseline, and gate paper promotion against the expected active version. This provides reproducible evaluation and controlled promotion, not independently verified holdouts, proven returns or the full Scion self-modifying runtime. See [native intelligence](./packages/aukora/README.md).
+
+## Evidence and current boundaries
+
+Export the evidence bundle from Wolf and verify it independently:
+
+```sh
+npm run wolf:verify -- evidence.json
+```
+
+Optional arguments are an independently known public key and a retained-head JSON file. Signatures prove attribution and byte integrity, not truth or profitability. A bundle's own key alone does not identify a known author; a separate retained checkpoint is needed to detect rollback relative to that checkpoint. Exports may contain private research and account facts. There is **no automatic relay publishing**.
+
+The evidence store currently accepts **4,096 receipts** and a bounded export size. It refuses further records at capacity; unattended operation cannot continue indefinitely, and automatic archive rotation is not implemented. Evidence failure before a paper effect refuses it; failure after an effect pauses without pretending the effect rolled back.
+
+Trading uses simulated funds on supported, verified zero-fee binary markets. Unsupported markets remain browse-only. There are no wallet keys, live-fund submission routes, automatic final settlement, or proven profitable strategies. Replay has explicit liquidity/fee/model assumptions and cannot establish live execution quality. Full X6 host integration, public multi-user hosting and relay distribution remain separate work.
+
+## Develop and integrate
 
 ```sh
 npm run wolf:check
 npm run wolf:test
 npm test
+npm run wolf:build
 ```
 
-See the [website integration handoff](./docs/WOLF_WEBSITE_INTEGRATION.md) and [full specification](./docs/WOLF_NATIVE_DEMO_SPEC_2026-11-11.md). The copied Spatial component closure retains its own copyright and AGPL notices in `packages/spatial-ui`; the older repository description below does not change those notices.
+`wolf:test` covers the foundation and service contracts; `npm test` retains the earlier engine/lab suite. Legacy `paper:*` scripts are separate experiments, not the current application entry point.
 
-## Earlier trading lab
+Embed [WolfApp](./packages/wolf-ui/WolfApp.tsx) in the host's center slot and connect its callbacks to the resident Auma. The [website integration handoff](./docs/WOLF_WEBSITE_INTEGRATION.md) describes that host boundary. A public site needs its own authenticated, isolated service deployment and cannot use a visitor's localhost as a backend.
 
-The following notes describe the previous lab implementation and its separate `paper:*` scripts. They are not the new native demo's service, UI or live-money capability.
-
-**One line:** An agent can think about markets; it cannot spend until a human-signed aperture says yes to the exact order bytes — and every fill leaves a stranger-verifiable receipt.
-
-## Honesty floor (non-negotiable)
-
-| Mode | Meaning |
-|------|---------|
-| `PAPER` | Default. Simulated fills, friction on, no wallets, no orders. |
-| `LIVE_TAPE` | Optional keyless public market data (dual witness). Still paper money. |
-| `LIVE_MONEY` | Requires AUKORA-37 grant path. Exact order bytes on the approval surface. Not implemented until 37 is green. |
-
-- **Not investment advice.** No buy/sell recommendations. No guaranteed returns.
-- Evidence / model speech / noul **never** authorizes a live order.
-- Mind has **zero** trading logic in drivers — caps live in the harness.
-- Kill switch + loss cap are **in process**, not in the prompt.
-- Storyteller refuses live-claim receipts unless mode is honest.
-- Wallet seeds / API secrets are **never** collected into receipts.
-
-## Status
-
-Phase 0 extract is in, and Phase 1 paper is behind it. Default mode is `PAPER`. `LIVE_MONEY` is refused: AUKORA-37 is not in this repo.
-
-```bash
-npm install
-npm test
-npm run paper:demo
-npm run paper:ui
-```
-
-`npm run paper:ui` serves the paper desk at `http://127.0.0.1:4173/`. It marks fills off public Polymarket prices. It does not submit orders.
-
-A stranger's reading of the demo is `docs/DEMO.md`. The fence is `docs/TRADING.md`.
-
-The private symbiote pin `796934b` was not readable from this environment. Engines are the public kernel snapshot named in `docs/EXTRACT_PROVENANCE.md`, still under AGPL-3.0-or-later. That is a measured ceiling, not a claim that the private pin was verified.
-
-## Out of scope (day one)
-
-Nautilus full stack, Kronos GPU farm, TensorRT, LLM calls inside the order hot path, LIVE_MONEY without AUKORA-37, faking grants.
-
-## License
-
-Proprietary (private). Do not casually merge AGPL-licensed symbiote wholesale — port engines carefully under an agreed license plan.
+Retain third-party notices when sharing or modifying this private repository. Included Spatial/legacy engine closures retain their AGPL notices; the AUKORA intelligence closure, Cordis, model workers and providers retain their respective licenses. Private access does not replace those terms.

@@ -1,8 +1,8 @@
 {
   "name": "wolf-trader",
   "private": true,
-  "version": "0.1.0",
-  "description": "Wolf Trader: single-pane AUKORA demo with live public markets and durable simulated positions.",
+  "version": "0.2.0",
+  "description": "Wolf Trader: native AUKORA research, local forecasting, evidence memory and bounded autonomous paper trading.",
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -10,11 +10,13 @@
     "paper:ui": "node scripts/serve-ui.mjs",
     "mind:auto": "node --experimental-strip-types scripts/wolf-mind-auto.ts",
     "wolf:dev": "vite --config vite.config.ts",
-    "wolf:build": "node scripts/build-wolf.mjs",
+    "wolf:build": "node scripts/build-runtime-vendor.mjs && node scripts/build-wolf.mjs",
     "wolf:start": "node apps/service/server.mjs",
     "wolf:check": "tsc -p tsconfig.wolf.json",
-    "wolf:test": "node --test tests/native-*.test.mjs apps/service/market-adapters.test.mjs",
-    "wolf:install": "node scripts/install-wolf-macos.mjs"
+    "wolf:test": "node --test tests/native-*.test.mjs tests/aukora-*.test.mjs tests/autonomy-*.test.mjs tests/intelligence-*.test.mjs tests/providers-*.test.mjs tests/foundation-*.test.mjs tests/forecast-*.test.mjs apps/service/market-adapters.test.mjs",
+    "wolf:install": "node scripts/install-wolf-macos.mjs",
+    "wolf:verify": "node scripts/verify-evidence.mjs",
+    "wolf:setup": "node scripts/setup-intelligence.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",
@@ -22,7 +24,8 @@
     "@types/react-dom": "19.3.0",
     "typescript": "6.0.3",
     "vite": "6.4.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "esbuild": "0.25.12"
   },
   "engines": {
     "node": ">=24.9"

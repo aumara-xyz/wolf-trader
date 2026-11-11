@@ -1,6 +1,6 @@
-# Wolf handoff for the AUKORA website demo
+# Wolf Trader 0.2 — AUKORA host integration
 
-11 November 2026. The standalone implementation is in `wolf-trader`. **Wolf occupies only the existing center pane. Auma's resident conversation stays untouched.** Website integration has not been applied by this build. Preserve the website's current URL, access settings and owner configuration.
+11 November 2026. The standalone foundation is in `wolf-trader`. **Wolf occupies only the existing center pane. Auma's resident conversation stays untouched.** This handoff does not claim that website or full X6 host integration has been deployed. Preserve the website's current URL, access settings and owner configuration.
 
 ## Reuse the app
 
@@ -9,7 +9,7 @@
 - [The client](../packages/wolf-ui/api.ts) speaks same-origin `/api/wolf/v1`. It accepts an injected fetch transport; WolfApp also accepts an injected client. [Types](../packages/wolf-ui/types.ts) define market/account records, and WolfApp exports its host props and handle.
 - [Scoped Wolf styles](../packages/wolf-ui/wolf.css) preserve the website's header/portal dimensions. The required original primitives, icons, palette and license are in [Spatial UI](../packages/spatial-ui/PROVENANCE.md).
 
-Use the host's React instance. The standalone build uses React 19.3.1, matching the reviewed website; X6 integration needs its own host-compatible renderer binding. Importing `apps/desk/main.tsx` creates a root and standalone body styles, so do not use that entry inside the existing website root.
+Use the host's React instance. The standalone build uses React 19.3.1; verify compatibility with the target host. X6 integration needs its own host-compatible renderer binding. Importing `apps/desk/main.tsx` creates a root and standalone body styles, so do not use that entry inside the existing website root.
 
 The host owns lane navigation and mobile chat/app switching. Wolf must simply fit the space its center pane receives, preserving drafts, selected market and mobile keyboard reachability. Never include the website preview's isolation shim or status-hiding cleanup in Wolf's service path.
 
@@ -26,34 +26,45 @@ Mount WolfApp with a React ref and the host callbacks. Keep the same existing Au
 
 Pass the selected market ID for a market explanation; guessing the first search result can explain the wrong contract. An opportunity is evidence and relevance, never order authorization. The exported types and [browser-safe host boundary](../packages/wolf-core/host-research.mjs) define the implemented contract.
 
-The service's guided tools already search public markets, explain the selected market's source rules and read actual demo portfolio facts. They remain available to the host; the standalone surface does not render a chat. Optional configured DeepSeek selection is implemented and fixture-tested; no live provider was configured or called during the build. The website's existing plain-text chat does not automatically have market tools. Connect those tools to the resident conversation and route its references into Wolf's handle.
+The service's guided tools search public markets, explain the selected market's source rules and read actual paper portfolio facts. The foundation additionally runs source tracking, Kira recall, installed Laya/Kronos/Dexter specialists, signed evidence and bounded autonomous paper mandates. Jev is an optional explicitly enabled paid provider. These are server capabilities; the standalone surface does not render a chat. The host's existing conversation does not automatically have market tools. Connect read/research tools to that conversation and route its references into Wolf's handle.
 
-The model receives no `commitDemo` tool. Quotes and simulated fills come from the domain service. Keep research cancellation and stale-reply suppression; do not mutate portals by scraping generated chat HTML. Inject an approved host fetch/client or add narrowly scoped Wolf routes to the website's transport. Do not remove its global preview isolation to make one app work.
+The model receives no `commitDemo`, mandate-arm, forecast-mapping approval or candidate-promotion tool. Quotes and simulated fills come from the domain service. A human arms a bounded standing paper mandate; permitted actions then run without individual trade approval. Keep research cancellation and stale-reply suppression; do not mutate portals by scraping generated chat HTML. Inject an approved host fetch/client or add narrowly scoped Wolf routes to the website's transport. Do not remove its global preview isolation to make one app work.
 
 ## Deploy the service deliberately
 
-The standalone [service](../apps/service/server.mjs) is Node 24 with built-in SQLite. It provides public-data brokerage, research, quote previews, transaction commits, operation recovery, portfolio/activity and reset epochs. Its local session uses a same-origin cookie and capability; it intentionally refuses cross-origin mutations and arbitrary hosts.
+The standalone [service](../apps/service/server.mjs) requires Node 24.9+ with built-in SQLite and defaults to `http://127.0.0.1:4328/`. It provides public-data brokerage, research, quote previews, transaction commits, operation recovery, portfolio/activity, reset epochs, evidence and autonomy. Its local session uses a same-origin cookie and capability; it intentionally refuses cross-origin mutations and arbitrary hosts.
 
 **A public website cannot call the owner's localhost.** For a hosted demo, deploy a compatible service/account store, or port its domain contract to the website Worker with appropriate transactional storage. Do not weaken the localhost checks and expose the owner's personal demo database. Give each visitor a separate account/session. One account has one canonical writer; multi-process deployment requires shared operation ownership, not separate in-memory pending registries.
 
 Reuse the pure fixed-point rules in [wolf-core](../packages/wolf-core/pricing.mjs). The ledger relies on atomic account/position/journal updates, expected revisions and idempotency IDs. A browser localStorage balance is not a substitute. Copy the market and research adapters with their tests; preserve the selected dependency licenses.
 
-API routes are under `/api/wolf/v1/`: `session`, `capabilities`, `markets`, `market`, `book`, `portfolio`, `activity`, `research`, `preview`, `commitDemo`, `operation`, `resetDemo`, `events`. Monetary mutations require POST. The installed build identity is available in `/release.json` and capabilities.
+API routes are under `/api/wolf/v1/`. The current service and [client](../packages/wolf-ui/api.ts) are the route contract:
 
-## Preserve the demonstrated boundaries
+- Core: `session`, `capabilities`, `markets`, `market`, `book`, `portfolio`, `activity`, `research`, `preview`, `commitDemo`, `operation`, `resetDemo`, `events`.
+- Research/evidence: `intelligence`, `intelligence/scan`, `intelligence/cancel`, `intelligence/observation`, `intelligence/evidence`, `intelligence/verify`, `intelligence/recall`, `intelligence/correct`, `intelligence/nostr/import`, `intelligence/nostr/export`.
+- Explicit experiment/approval actions: `intelligence/candidate`, `intelligence/evaluate`, `intelligence/promote`, `intelligence/mapping`, `intelligence/mapping/revoke`, `intelligence/replay`.
+- Paper runner: `autonomy`, `autonomy/events`, `autonomy/arm`, `autonomy/pause`, `autonomy/stop`, `autonomy/tick`, `autonomy/evaluate`.
 
-This release supports simulated transactions on verified zero-fee, non-negative-risk binary markets. Fee-bearing or unsupported markets remain browse-only. Settlement is pending until a verified payout adapter is implemented. Research is guided unless a provider/host conversation is configured. No Nostr trading transport, continuous autonomous trading, real wallet or exchange order submission is claimed.
+Mutations require POST and an authenticated local session. The hosted version must authenticate reads as well, enforce per-user ownership, and retain explicit human control of arm/mapping/promotion actions. A host conversation must not inherit the app's mutation capability. The installed build identity is available in `/release.json` and capabilities.
 
-Keep “Demo money” visible, retain source times and reject stale quotes. Buys consume asks; sells consume bids. Missing liquidity cannot be turned into a successful cash-out. Late or lost responses must resolve the existing operation ID; `pending` means wait, not submit a second action.
+## Preserve the foundation's boundaries
+
+This release supports manual and bounded autonomous simulated transactions on verified zero-fee, non-negative-risk binary markets. Fee-bearing or unsupported markets remain browse-only. Settlement is pending until a verified payout adapter is implemented. There is no real wallet or live exchange order submission. Pause/Stop invalidate queued decisions, preserve existing positions and cannot guarantee liquidation or a maximum loss. Restart pauses the mandate and reconciles prior operations before rearming.
+
+Actual Kira/Nostr/Aura Wasm and X6.1 Cordis source closures are included. Nostr signs and verifies local evidence; explicit event import/export does not publish to relays. Signatures prove attribution and integrity, not source truth. The bounded evidence store stops at 4,096 receipts; archive rotation remains unimplemented. Keep keys and research/account databases outside source control and out of public assets.
+
+Federal Register observations and explicitly imported Trump/public statements retain source attribution, revision lineage and uncertainty. Imported text is not independently fetched. Classifier confidence, topic overlap and Kronos asset paths are not event probabilities. A Kronos directional action requires an exact owner-reviewed contract mapping, fresh signed research and the separate paper governor. Candidate evaluation uses supplied dated cases and baseline arithmetic; it does not establish an independently validated trading edge or run the full Scion runtime.
+
+Keep simulated-money status visible (the current API uses `capitalMode: 'DEMO'`), retain source times and reject stale quotes. Buys consume asks; sells consume bids. Missing liquidity cannot be turned into a successful cash-out. Late or lost responses must resolve the existing operation ID; `pending` means wait, not submit a second action. The independent paper governor must remain immediately before ledger mutation, after asynchronous market reads; moving it into a prompt or browser check loses that boundary.
 
 ## Acceptance in the website
 
-Observe the hosted integration at the existing URL: Wolf contained in the center pane, the same ongoing Auma conversation, correct portal geometry, actual public markets, a $25 demo buy, add, partial sale and full cash-out, consistent activity, reload recovery, explicit selected-market research and honest offline/provider errors. Verify visitor isolation and secret handling before sharing it. Record the hosted build identity separately from the standalone app.
+Observe the hosted integration at the existing URL: Wolf contained in the center pane, the same ongoing Auma conversation, correct portal geometry, actual public markets, a simulated buy/add/partial sale/cash-out, consistent activity, reload recovery, selected-market research, source corrections and honest offline/provider errors. In a disposable paper account, verify a bounded mandate, automatic actions, pause during pending work and restart reconciliation. Verify evidence export/cold verification and visitor isolation before sharing it. Record the hosted build identity separately from the standalone app.
 
-The original full specification remains the roadmap; a functioning standalone demo is not proof that these hosted integration steps have been completed.
+The earlier demo specification is historical context. The [current README](../README.md), implemented service, provider pins and focused tests describe the 0.2 foundation. Standalone functionality is not proof that these hosted integration steps have been completed.
 
-## Observed standalone delivery
+## Standalone installation and delivery checks
 
-On 11 November 2026, the installed `~/Applications/AUKORA Wolf.app` served build `521f6f7b5bacdffb`. The native window visibly contained one Wolf pane and no conversation column. A $25 simulated buy created 312.5 Yes shares; full cash-out at the public bids returned $21.875, leaving $996.875 with no position. A new demo account restored $1,000, persisted through reload, and reconnected to live market data. The earlier account history was preserved.
+The current installer produces `~/Applications/Wolf Trader.app`; its service defaults to port 4328 and stores account data in the platform's Wolf Trader application-data directory. `npm run wolf:setup` installs pinned local providers outside Git. See the README for prerequisites, commands and model limits.
 
-Type checking, the production build, 30 native demo tests and the existing 112-test suite passed. These checks cover the standalone implementation; the hosted acceptance steps above remain the website integration task.
+Verify the process actually serving that port and its loaded `/release.json`, then observe the installed app's behavior. A source commit, installation file or prior demo screenshot does not establish the current running release. Run `npm run wolf:check`, `npm run wolf:test`, `npm test` and `npm run wolf:build` for the current source; record live observations separately from those checks.

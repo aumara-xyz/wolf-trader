@@ -1,7 +1,7 @@
 export interface Outcome { name: string; assetId: string; price?: string | number | null }
 export interface Market {
   id: string; question: string; url?: string; slug?: string; outcomes: Outcome[];
-  rules?: string; description?: string; active?: boolean; closed?: boolean; acceptingOrders?: boolean;
+  rulesVersion?: string; rules?: string; description?: string; active?: boolean; closed?: boolean; acceptingOrders?: boolean;
   supported?: boolean; unsupportedReasons?: string[]; protocolVersion?: string;
   observedAt?: string; fetchedAt?: string; receivedAt?: string; endDate?: string; closeTime?: string; quantityStep?: string;
   fee?: { known?: boolean; rateBps?: string | number; feeRate?: string | number; model?: string };

@@ -6,7 +6,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
     private var window: NSWindow!
     private var web: WKWebView!
     private var service: Process?
-    private let home = URL(string: "http://127.0.0.1:4318/")!
+    private let home = URL(string: "http://127.0.0.1:4328/")!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let menu = NSMenu()
@@ -14,9 +14,9 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
         let appItem = NSMenuItem()
         appItem.submenu = appMenu
         menu.addItem(appItem)
-        appMenu.addItem(withTitle: "About AUKORA Wolf", action: #selector(showAbout), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About Wolf Trader", action: #selector(showAbout), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit AUKORA Wolf", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Wolf Trader", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
         let edit = NSMenu(title: "Edit")
         for (title, selector, key) in [("Undo", "undo:", "z"), ("Cut", "cut:", "x"), ("Copy", "copy:", "c"), ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")] {
@@ -34,7 +34,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
         let available = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let size = NSSize(width: min(900, available.width - 40), height: min(900, available.height - 40))
         window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "AUKORA Wolf · Demo"
+        window.title = "Wolf Trader · Paper intelligence"
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.backgroundColor = NSColor(srgbRed: 0.055, green: 0.065, blue: 0.09, alpha: 1)
@@ -52,13 +52,13 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        showStatus("Opening your workspace…", detail: "Live public markets. Demo money.")
+        showStatus("Opening your workspace…", detail: "Live markets. Local intelligence. Paper capital.")
         Task { await start() }
     }
 
     private func showStatus(_ title: String, detail: String) {
         func escape(_ value: String) -> String { value.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;") }
-        web.loadHTMLString("<!doctype html><meta name='color-scheme' content='dark'><body style='margin:0;background:#10131b;color:#e8eaed;font:16px -apple-system;display:grid;place-content:center;height:100vh;text-align:center'><div style='letter-spacing:.16em;color:#81d4b4;font-size:12px'>AUKORA WOLF</div><h1 style='font-size:25px;font-weight:400'>\(escape(title))</h1><p style='color:#b8bcc4;max-width:620px;line-height:1.6'>\(escape(detail))</p></body>", baseURL: nil)
+        web.loadHTMLString("<!doctype html><meta name='color-scheme' content='dark'><body style='margin:0;background:#10131b;color:#e8eaed;font:16px -apple-system;display:grid;place-content:center;height:100vh;text-align:center'><div style='letter-spacing:.16em;color:#81d4b4;font-size:12px'>WOLF TRADER</div><h1 style='font-size:25px;font-weight:400'>\(escape(title))</h1><p style='color:#b8bcc4;max-width:620px;line-height:1.6'>\(escape(detail))</p></body>", baseURL: nil)
     }
 
     private func releaseID(_ url: URL) async -> String? {
@@ -88,7 +88,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
             web.load(URLRequest(url: home))
             return
         }
-        let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/AUKORA Wolf")
+        let support = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Wolf Trader")
         do {
             try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
             let logURL = support.appendingPathComponent("service.log")
@@ -105,7 +105,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
             process.arguments = [resources.appendingPathComponent("app/apps/service/server.mjs").path]
             process.currentDirectoryURL = resources.appendingPathComponent("app")
             var environment = ProcessInfo.processInfo.environment
-            environment["WOLF_PORT"] = "4318"
+            environment["WOLF_PORT"] = "4328"
             environment["WOLF_DATA_DIR"] = support.path
             environment["WOLF_BUILD_ID"] = expected
             process.environment = environment
@@ -121,7 +121,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
                 if !process.isRunning { break }
                 try? await Task.sleep(nanoseconds: 300_000_000)
             }
-            showStatus("Wolf could not start", detail: "Your saved demo account is unchanged. Startup details are in Library/Application Support/AUKORA Wolf/service.log.")
+            showStatus("Wolf could not start", detail: "Your saved demo account is unchanged. Startup details are in Library/Application Support/Wolf Trader/service.log.")
         } catch {
             showStatus("Wolf could not start", detail: error.localizedDescription)
         }
@@ -129,7 +129,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
 
     @objc private func reload() { web.reloadFromOrigin() }
     @objc private func showAbout() {
-        NSApp.orderFrontStandardAboutPanel(options: [NSApplication.AboutPanelOptionKey.applicationName: "AUKORA Wolf", .applicationVersion: "Native demo · Live public data / Demo money"])
+        NSApp.orderFrontStandardAboutPanel(options: [NSApplication.AboutPanelOptionKey.applicationName: "Wolf Trader", .applicationVersion: "Intelligence foundation · Live public data / Paper capital"])
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { if let service, service.isRunning { service.terminate() } }
@@ -139,7 +139,7 @@ final class WolfApp: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUI
     }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
-        if url.scheme == "about" || (url.host == "127.0.0.1" && url.port == 4318) { decisionHandler(.allow); return }
+        if url.scheme == "about" || (url.host == "127.0.0.1" && url.port == 4328) { decisionHandler(.allow); return }
         if action.navigationType == .linkActivated && url.scheme == "https" { NSWorkspace.shared.open(url) }
         decisionHandler(.cancel)
     }

@@ -1,0 +1,30 @@
+[package]
+name = "nostr-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+# Carried from aukora-wasm af58c0d crates/nostr, with the same exact pins.
+# Only registry dependencies: the mv-abi source is included as a module.
+[dependencies]
+base64 = "=0.22.1"
+bech32 = "=0.12.0"
+chacha20 = "=0.10.2"
+hkdf = "=0.13.0"
+hmac = "=0.13.0"
+k256 = { version = "=0.14.0", default-features = false, features = ["schnorr", "ecdh"] }
+sha2 = "=0.11.1"
+zeroize = "=1.9.1"
+
+# Mirrored by ../mv-cargo/build-cargo-metered-cell.mjs.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+# Standalone workspace: native/Cargo.toml is a shared file.
+[workspace]

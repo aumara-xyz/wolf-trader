@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { createWolfClient, WolfApiError, type WolfClient } from './api'
 import { WolfSurface } from './WolfSurface'
+import { IntelligencePortals } from './IntelligencePortals'
 import { extractHostResearchReferences, resolveHostResearch, validateResolvedHostMarket } from '../wolf-core/host-research.mjs'
 import type { Activity, Draft, Market, Portfolio, Quote } from './types'
 const initialDraft = (m: Market): Draft => ({ assetId: m.outcomes[0]?.assetId ?? '', side: 'BUY', amount: '25', quantity: '' })
@@ -130,5 +131,5 @@ export const WolfApp = forwardRef<WolfAppHandle, WolfAppProps>(function WolfApp(
     try { await onAskAuma({ message: `Explain exactly what decides this market: ${question}`, marketId }) }
     catch (error) { setServiceError(`Auma could not be opened. ${errorText(error)}`) }
   }
-  return <div className="wolf-app-pane wolf-theme"><WolfSurface markets={markets} portfolio={portfolio} activity={activity} expanded={expanded} drafts={drafts} quotes={quotes} quoteErrors={quoteErrors} quoting={quoting} committing={committing} pendingOperation={pendingOperation} now={now} dataState={dataState} marketError={marketError} serviceError={serviceError} notice={notice} findings={findings} loadingMore={loadingMore} resetOpen={resetOpen} resetBusy={resetBusy} onToggle={id => { setExpanded(current => current === id ? null : id); setNotice('') }} onDraft={changeDraft} onQuote={id => { void requestQuote(id) }} onCommit={id => { void commit(id) }} onRefresh={refresh} onMore={() => { void more() }} onOpenPosition={(marketId, assetId) => { void openPosition(marketId, assetId) }} onResetOpen={setResetOpen} onReset={() => { void reset() }} onResolve={() => { void resolveOperation() }} onExplain={(question, marketId) => { void explain(question, marketId) }} /></div>
+  return <div className="wolf-app-pane wolf-theme"><WolfSurface intelligence={<IntelligencePortals client={client} markets={markets} onMarkets={mergeMarkets}/>} markets={markets} portfolio={portfolio} activity={activity} expanded={expanded} drafts={drafts} quotes={quotes} quoteErrors={quoteErrors} quoting={quoting} committing={committing} pendingOperation={pendingOperation} now={now} dataState={dataState} marketError={marketError} serviceError={serviceError} notice={notice} findings={findings} loadingMore={loadingMore} resetOpen={resetOpen} resetBusy={resetBusy} onToggle={id => { setExpanded(current => current === id ? null : id); setNotice('') }} onDraft={changeDraft} onQuote={id => { void requestQuote(id) }} onCommit={id => { void commit(id) }} onRefresh={refresh} onMore={() => { void more() }} onOpenPosition={(marketId, assetId) => { void openPosition(marketId, assetId) }} onResetOpen={setResetOpen} onReset={() => { void reset() }} onResolve={() => { void resolveOperation() }} onExplain={(question, marketId) => { void explain(question, marketId) }} /></div>
 })

@@ -1,0 +1,12 @@
+# Isolated local research workers, not the app's execution service.
+torch==2.9.1
+numpy==2.3.5
+pandas==2.3.3
+einops==0.8.1
+huggingface_hub==0.36.0
+safetensors==0.6.2
+tqdm==4.68.4
+laya==0.4.12
+onnxruntime==1.30.0
+transformers==4.57.6
+nautilus_trader==1.231.0
