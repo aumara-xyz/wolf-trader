@@ -1,0 +1,34 @@
+{
+  "name": "wolf-trader",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Wolf Trader: single-pane AUKORA demo with live public markets and durable simulated positions.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "paper:demo": "node scripts/paper-demo.mjs",
+    "paper:ui": "node scripts/serve-ui.mjs",
+    "mind:auto": "node --experimental-strip-types scripts/wolf-mind-auto.ts",
+    "wolf:dev": "vite --config vite.config.ts",
+    "wolf:build": "node scripts/build-wolf.mjs",
+    "wolf:start": "node apps/service/server.mjs",
+    "wolf:check": "tsc -p tsconfig.wolf.json",
+    "wolf:test": "node --test tests/native-*.test.mjs apps/service/market-adapters.test.mjs",
+    "wolf:install": "node scripts/install-wolf-macos.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "vite": "6.4.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24.9"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

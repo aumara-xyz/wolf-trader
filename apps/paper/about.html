@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOLF · About</title>
+  <link rel="stylesheet" href="/apps/paper/paper.css" />
+</head>
+<body>
+  <main class="wrap prose">
+    <div class="top">
+      <a class="brand" href="/">WOLF</a>
+      <span class="pill">PAPER</span>
+    </div>
+    <h1>About</h1>
+    <p>WOLF is a paper desk on this computer. It reads public Polymarket prices and writes simulated fills into a local book. There is no wallet on this page, and nothing here is sent to an exchange.</p>
+    <h2>Modes</h2>
+    <ul>
+      <li>PAPER is the default. Cash is simulated. Prices are public. Spend is off.</li>
+      <li>LIVE_TAPE may read keyless public prices. The money stays paper.</li>
+      <li>LIVE_MONEY is refused. A real order needs an AUKORA-37 grant. That grant is not in this repo, and this desk will not invent one.</li>
+    </ul>
+    <h2>Book</h2>
+    <p>Each fill keeps a receipt: market, price, source, time. Audit replays those receipts against cash and positions. Kill stops new fills. A loss cap stops them if equity falls through the session floor.</p>
+    <p>This is not investment advice. A paper fill is not a prediction and not a promise.</p>
+    <p class="foot"><a href="/research">Research</a></p>
+  </main>
+</body>
+</html>

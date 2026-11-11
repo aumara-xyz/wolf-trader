@@ -1,0 +1,10 @@
+html, body, #root { margin:0; width:100%; height:100%; min-height:100%; }
+body { --dsw-alias-bg-layer-1:#1B1F2A; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#0b0d18; color:#e8eaed; color-scheme:dark; }
+* { box-sizing:border-box; }
+button, input, textarea { font:inherit; }
+button { -webkit-tap-highlight-color:transparent; }
+
+/* Standalone carrier displays the app only; no replacement Auma lane or host controls. */
+#root { padding:10px; height:100dvh; background:var(--dsw-specific-spatial-canvas); overflow:hidden; }
+#root > .wolf-app-pane { border:1px solid var(--aukora-border); border-radius:22px; background:var(--dsw-specific-spatial-lane-bright); }
+@media (max-width:600px) { #root { padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left)); } }

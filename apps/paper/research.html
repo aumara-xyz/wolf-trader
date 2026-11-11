@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOLF · Research</title>
+  <link rel="stylesheet" href="/apps/paper/paper.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <a class="brand" href="/">WOLF</a>
+      <span class="pill">PAPER</span>
+    </div>
+    <h2>Research</h2>
+    <p id="state" class="empty"></p>
+    <form id="form" hidden>
+      <input id="question" class="search" name="question" autocomplete="off" />
+      <div class="trade">
+        <button type="button" class="side" id="yes" aria-pressed="true">Yes</button>
+        <button type="button" class="side" id="no" aria-pressed="false">No</button>
+        <button type="submit" class="primary" id="go">Write note</button>
+      </div>
+    </form>
+    <div id="out"></div>
+    <p class="foot"><a href="/about">About</a></p>
+  </main>
+  <script type="module" src="/apps/paper/research.js"></script>
+</body>
+</html>

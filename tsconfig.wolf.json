@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["apps/desk/**/*.ts", "apps/desk/**/*.tsx", "packages/wolf-ui/**/*.ts", "packages/wolf-ui/**/*.tsx", "packages/spatial-ui/**/*.ts", "packages/spatial-ui/**/*.tsx"]
+}
