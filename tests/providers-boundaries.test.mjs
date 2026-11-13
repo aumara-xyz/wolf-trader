@@ -77,5 +77,5 @@ test('a cancelled local forecast never starts an unavailable worker',async()=>{
 
 test('missing runtimes stay unavailable and unverified',async()=>{
   const p=createProviderRegistry({config:{runtimeDir:'/nonexistent/wolf-test-runtime'},env:{}});
-  try {const status=await p.status();assert.equal(status.length,5);assert.ok(status.every(p=>p.available===false && p.verified===false && p.fundsAccess===false));}finally{p.close();}
+  try {const status=await p.status();assert.equal(status.length,6);assert.ok(status.every(p=>p.available===false && p.verified===false && p.fundsAccess===false));}finally{p.close();}
 });

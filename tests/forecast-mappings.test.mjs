@@ -30,7 +30,7 @@ function fixture(t) {
     return { specialists: { kronos: forecast }, evidenceId: receipt.id };
   }
   t.after(() => { mappings.close(); db.close(); aukora.close(); rmSync(dir, { recursive: true, force: true }); });
-  return { get mappings() { return mappings; }, aukora, input, db, scan, market, advance: n => { clock += n; }, reopen() { mappings.close(); mappings = createForecastMappings({ dataDir: dir, markets: { market: async () => market }, aukora, now: () => clock }); } };
+  return { dir, get mappings() { return mappings; }, aukora, input, db, scan, market, advance: n => { clock += n; }, reopen() { mappings.close(); mappings = createForecastMappings({ dataDir: dir, markets: { market: async () => market }, aukora, now: () => clock }); } };
 }
 
 test('owner-reviewed exact mapping plus actual signed forecast yields an attributed non-probability signal', async t => {
@@ -82,7 +82,11 @@ test('chunked signed findings reconstruct, and stale or wrong-revision outputs c
 
 test('changed evidence signatures fail closed even when cache data is unchanged', async t => {
   const f = fixture(t), mapping = await f.mappings.create(f.input);
-  const original = f.aukora.exportEvidence, bundle = original(); bundle.events[0].sig = '0'.repeat(128);
-  f.aukora.exportEvidence = () => bundle;
-  assert.throws(() => f.mappings.get(mapping.id), { code: 'FORECAST_MAPPING' });
+  const storage=new DatabaseSync(join(f.dir,'aukora','intelligence.sqlite'));
+  try{
+    const row=storage.prepare('SELECT id,event FROM evidence ORDER BY sequence LIMIT 1').get();
+    const event=JSON.parse(row.event);event.sig='0'.repeat(128);
+    storage.prepare('UPDATE evidence SET event=? WHERE id=?').run(JSON.stringify(event),row.id);
+    assert.throws(()=>f.mappings.get(mapping.id),{code:'EVIDENCE_INTEGRITY'});
+  }finally{storage.close();}
 });

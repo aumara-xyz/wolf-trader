@@ -92,7 +92,21 @@ export function createIntelligenceService({dataDir,markets,ledger,aukora,provide
     const abort=()=>controller.abort();input.signal?.addEventListener('abort',abort,{once:true});
     const job={id,phase:'running',stage:'Reading public markets',startedAt:new Date(now()).toISOString(),stages:[]};
     active={job,controller};setJob(job);
-    const step=async(name,work)=>{controller.signal.throwIfAborted();job.stage=name;setJob(job);const start=now();try{const value=await work();controller.signal.throwIfAborted();job.stages.push({name,state:'complete',durationMs:now()-start});setJob(job);return value;}catch(error){if(controller.signal.aborted)throw error;const failure=errorView(error);job.stages.push({name,state:'unavailable',durationMs:now()-start,...failure});setJob(job);return {unavailable:true,...failure};}};
+    const step=async(name,work)=>{
+      controller.signal.throwIfAborted();job.stage=name;setJob(job);const start=now();
+      const opened=record('research.stage-started',{scanId:id,name,startedAt:new Date(start).toISOString(),authority:'research-only'});
+      try{
+        const value=await work();controller.signal.throwIfAborted();
+        const receipt=record('research.stage-completed',{scanId:id,name,durationMs:now()-start,result:value},[idOf(opened)]);
+        job.stages.push({name,state:'complete',durationMs:now()-start,evidenceId:idOf(receipt)});setJob(job);return value;
+      }catch(error){
+        const failure=errorView(error),state=controller.signal.aborted?'cancelled':'unavailable';
+        const receipt=record('research.stage-'+state,{scanId:id,name,durationMs:now()-start,...failure},[idOf(opened)]);
+        job.stages.push({name,state,durationMs:now()-start,evidenceId:idOf(receipt),...failure});setJob(job);
+        if(controller.signal.aborted)throw error;
+        return {unavailable:true,...failure};
+      }
+    };
     try{
       const discovery=await step('Polymarket discovery',()=>input.marketId?markets.market(input.marketId,{fresh:true,signal:controller.signal}).then(m=>({markets:[m]})):markets.searchMarkets({query,limit:6,signal:controller.signal}));
       if(discovery.unavailable)throw Object.assign(new Error(discovery.message),{code:discovery.code});
@@ -129,6 +143,7 @@ export function createIntelligenceService({dataDir,markets,ledger,aukora,provide
         if(available('kronos')){candleRecord=await step('Coinbase · complete candle history',()=>sources.candles(input.symbol??'BTC-USD',{signal:controller.signal}));if(!candleRecord.unavailable){const c=record('candles.observed',candleRecord);parents.push(idOf(c));stages.kronos=await step('Kronos · underlying asset forecast',()=>providers.forecast({...candleRecord,horizon:6,signal:controller.signal}));}}
       }
       controller.signal.throwIfAborted();
+      parents.push(...job.stages.map(stage=>stage.evidenceId).filter(Boolean));
       const facts=record('research.findings',{findings,specialists:stages,memoryIds:memory?.items?.map(x=>x.id)??[],limitations:['Topic relevance is not outcome probability.','Kronos forecasts an underlying asset; no automatic conversion to Polymarket odds.','Source signatures establish attribution, not factual truth.']},parents);
       for(const item of findings)aukora.remember({kind:'experience',text:excerpt(`${item.question}\n${item.leads.length} source leads. ${item.forecastStatus}. Rules ${item.rulesVersion??'unavailable'}.`,3600),sources:canonical.filter(m=>m.id===item.marketId).map(m=>({id:`market:${m.id}`,url:m.sourceUrl??m.url})),capture:'model-generated',parents:[idOf(facts)]});
       const result={id,observedAt:new Date(now()).toISOString(),query,markets:canonical,findings,specialists:stages,memory,documents:documents.slice(0,6),candles:candleRecord&&!candleRecord.unavailable?{symbol:candleRecord.symbol,sourceUrl:candleRecord.sourceUrl,count:candleRecord.candles.length,observedAt:candleRecord.observedAt,contentHash:candleRecord.contentHash}:null,evidenceId:idOf(facts),signals:[],authorizesOrder:false,stages:job.stages};

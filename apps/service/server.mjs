@@ -11,6 +11,10 @@ import { createProviderRegistry } from '../../packages/providers/index.mjs';
 import { createIntelligenceService } from '../../packages/intelligence/service.mjs';
 import { createForecastMappings } from '../../packages/intelligence/forecast-mappings.mjs';
 import { createAutonomyService } from '../../packages/autonomy/index.mjs';
+import { runControlChallenges } from '../../packages/weekly/challenges.mjs';
+import { createWeeklyDesk } from '../../packages/weekly/index.mjs';
+import { createAuthorityService, createResearchPolicyService, actionDigest } from '../../packages/authority/index.mjs';
+import { resolveMandate } from '../../packages/autonomy/strategy.mjs';
 import { composeWolf } from '../../packages/runtime/composition.mjs';
 const defaultDist = fileURLToPath(new URL('../desk/dist/', import.meta.url));
 const defaultData = process.platform === 'darwin' ? join(homedir(), 'Library', 'Application Support', 'Wolf Trader') : join(homedir(), '.local/share/wolf-trader');
@@ -33,14 +37,23 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
   const mappings = createForecastMappings({ dataDir: join(dataDir, 'research'), markets, aukora, now });
   const pipelineProviders = { ...providers, forecast: input => providers.forecast({ ...input, horizon: mappings.horizon(input) }) };
   const intelligence = createIntelligenceService({ dataDir: join(dataDir, 'research'), markets, ledger, aukora, providers: pipelineProviders, fetchImpl, now });
-  const autonomy = createAutonomyService({ dataDir: join(dataDir, 'autonomy'), ledger, markets, intelligence: aukora, readSignals: () => mappings.signals(intelligence.latest()), approvedMappings: mappings.get, now });
+  const authority=createAuthorityService({dataDir:join(dataDir,'authority'),aukora,now});
+  const policy=createResearchPolicyService({dataDir:join(dataDir,'research-policy'),aukora,authority,now});
+  const weekly=createWeeklyDesk({dataDir:join(dataDir,'weekly'),markets,intelligence,aukora,providers,ledger,researchPolicy:policy,fetchImpl,now});
+  const authorityGate=({config,quote,operationId,final,action})=>{
+    const binding=config.authority;
+    if(!binding)fail('OWNER_GRANT_REQUIRED','Sign the exact paper limits before arming.',403);
+    const request={grantId:binding.grantId,scope:'paper',resource:binding.resource,action:action==='arm'?'arm':'trade',operationId:operationId??'preflight',payload:JSON.parse(JSON.stringify(quote??{resource:binding.resource}))};
+    if(final)authority.authorize(request);else authority.check(request);
+  };
+  const autonomy = createAutonomyService({ dataDir: join(dataDir, 'autonomy'), ledger, markets, intelligence: aukora, readSignals: () => [...mappings.signals(intelligence.latest()),...weekly.readSignals()], approvedMappings: mappings.get, authorityGate, now });
   const composition = await composeWolf({ markets, ledger, aukora, providers, intelligence, autonomy });
   // Slow research refreshes its own signed snapshot. The fast order path only
   // consumes completed snapshots; it never waits for an LLM committee.
   let closing = false, closePromise;
   const activeRequests = new Set();
   const refreshArmedResearch = async () => {
-    if (closing || autonomy.status().phase !== 'armed') return;
+    if (closing || autonomy.status().phase !== 'armed' || autonomy.status().mandate?.config.strategy==='weekly-hypothesis/v1') return;
     const current = await intelligence.status();
     if (closing || ['running', 'cancelling'].includes(current.job?.phase)) return;
     const reservation = autonomy.reserveResearchScan();
@@ -52,6 +65,11 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
   };
   const refreshResearch = () => refreshArmedResearch().catch(() => { if (!closing) autonomy.pause('Research could not start.'); });
   const researchTimer = setInterval(refreshResearch, 240000); researchTimer.unref();
+  const scheduledTimer=setInterval(()=>{
+    if(closing)return;
+    try{weekly.runScheduled(({grantId,resource,config})=>authority.authorize({grantId,scope:'research',resource,action:'scan',operationId:'weekly:'+weekly.scheduleStatus().nextRunAt,payload:config}));}
+    catch{weekly.configureSchedule({enabled:false});}
+  },60000);scheduledTimer.unref();
   const capability = randomBytes(32).toString('hex'), cookie = randomBytes(24).toString('hex');
   let buildId = process.env.WOLF_BUILD_ID || 'development';
   const releasePath = join(distDir, 'release.json');
@@ -87,10 +105,47 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
           return send(res, 200, { ...marketStatus, schema: 'wolf-capabilities/v1', capitalMode: 'DEMO', liveOrderSubmission: false, buildId,
             research: researchStatus, researchStatus, foundation: 'wolf-intelligence/v1', composition: composition.status(), native: aukora.status(), autonomy: autonomy.status().phase, marketData: marketStatus.marketData ?? 'unavailable', instanceId: capability.slice(0, 12) });
         }
+        if(req.method==='GET'&&route==='weekly')return send(res,200,await weekly.status());
+        if(req.method==='POST'&&route==='weekly/schedule/prepare'){
+          const request={enabled:true,intervalDays:7,query:input.query??'',limit:input.limit??3};
+          if(typeof request.query!=='string'||request.query.length>200||![1,2,3,4,5,6].includes(request.limit))fail('WEEKLY_SCHEDULE','Choose one to six markets and a short topic.');
+          return send(res,200,{request,terms:{scope:'research',resource:actionDigest(request),actions:['scan'],expiresAt:new Date(now()+28*86400000).toISOString(),maxUses:4}});
+        }
+        if(req.method==='POST'&&route==='weekly/schedule'){
+          if(input.request?.enabled===false)return send(res,200,weekly.configureSchedule({enabled:false}));
+          const resource=actionDigest(input.request);
+          authority.check({grantId:input.grantId,scope:'research',resource,action:'scan',operationId:'schedule-configuration',payload:input.request});
+          return send(res,200,weekly.configureSchedule(input.request,{grantId:input.grantId,resource}));
+        }
+        if(req.method==='GET'&&route==='weekly/books')return send(res,200,weekly.books());
+        if(req.method==='GET'&&route==='weekly/score')return send(res,200,await weekly.score());
+        if(req.method==='GET'&&route==='weekly/commitment')return send(res,200,weekly.commitment());
+        if(req.method==='GET'&&route==='weekly/export')return send(res,200,weekly.exportBundle());
+        if(req.method==='POST'&&route==='weekly/run')return send(res,202,weekly.launch(input));
+        if(req.method==='POST'&&route==='weekly/cancel')return send(res,200,weekly.cancel());
+        if(req.method==='POST'&&route==='weekly/score')return send(res,200,await weekly.score(input));
+        if(req.method==='POST'&&route==='weekly/invalidate')return send(res,200,weekly.invalidate(input));
+        if(req.method==='POST'&&route==='weekly/resolve')return send(res,200,await weekly.resolve(input));
+        if(req.method==='POST'&&route==='weekly/challenge')return send(res,200,{evidence:await weekly.challenge(input),controls:await runControlChallenges()});
+        if(req.method==='GET'&&route==='weekly/policy')return send(res,200,policy.status());
+        if(req.method==='POST'&&route==='weekly/policy/propose')return send(res,200,policy.propose(input));
+        if(req.method==='POST'&&route==='weekly/policy/evaluate')return send(res,200,policy.evaluate(input.id));
+        if(req.method==='POST'&&route==='weekly/policy/prepare')return send(res,200,policy.promotionRequest(input.id));
+        if(req.method==='POST'&&route==='weekly/policy/promote')return send(res,200,policy.promote(input.request,{grantId:input.grantId}));
+        if(req.method==='GET'&&route==='authority')return send(res,200,authority.status());
+        if(req.method==='POST'&&route==='authority/challenge')return send(res,200,authority.challenge(input));
+        if(req.method==='POST'&&route==='authority/complete')return send(res,200,authority.complete(input));
+        if(req.method==='POST'&&route==='authority/prepare'){
+          const request=input.request;if(!request||typeof request!=='object'||request.authority||request.grantId)fail('PAPER_REQUEST_INVALID','Review an exact paper request without authority fields.');
+          const config=resolveMandate(request,now());
+          return send(res,200,{request,limits:config,terms:{scope:'paper',resource:actionDigest(request),actions:['arm','trade'],expiresAt:config.expiresAt,maxUses:config.maxOrders+1}});
+        }
         if (req.method === 'GET' && route === 'intelligence') return send(res, 200, { ...await intelligence.status(), mappings: mappings.list(), composition: composition.status() });
         if (req.method === 'POST' && route === 'intelligence/scan') return send(res, 202, intelligence.launch(input));
         if (req.method === 'POST' && route === 'intelligence/cancel') return send(res, 200, intelligence.cancel());
         if (req.method === 'POST' && route === 'intelligence/observation') return send(res, 200, intelligence.importObservation(input));
+        if(req.method==='GET'&&route==='intelligence/evidence/manifest')return send(res,200,aukora.exportManifest());
+        if(req.method==='GET'&&/^intelligence\/evidence\/segments\/\d+$/.test(route))return send(res,200,aukora.exportSegment(Number(route.split('/').at(-1))));
         if (req.method === 'GET' && route === 'intelligence/evidence') return send(res, 200, aukora.exportEvidence());
         if (req.method === 'POST' && route === 'intelligence/verify') return send(res, 200, aukora.verifyEvidence(input.bundle ?? aukora.exportEvidence(), { expectedPubkey: aukora.status().identity.pubkey }));
         if (req.method === 'POST' && route === 'intelligence/recall') return send(res, 200, aukora.recall(input.query, { limit: input.limit ?? 8 }));
@@ -101,7 +156,8 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
         if (req.method === 'POST' && route === 'intelligence/evaluate') return send(res, 200, aukora.evaluateCandidate(input.id, input.evaluation));
         if (req.method === 'POST' && route === 'intelligence/promote') {
           if (autonomy.status().phase === 'armed') fail('PAUSE_BEFORE_PROMOTION', 'Pause the session before changing its research candidate.', 409);
-          return send(res, 200, aukora.promoteCandidate(input.id, input));
+          const {grantId,...request}=input;authority.authorize({grantId,scope:'research-policy',resource:actionDigest(request),action:'promote',operationId:'legacy-promote:'+grantId,payload:request});
+          return send(res, 200, aukora.promoteCandidate(input.id, request));
         }
         if (req.method === 'POST' && route === 'intelligence/mapping') {
           if (autonomy.status().phase === 'armed') fail('PAUSE_BEFORE_MAPPING', 'Pause the paper session before changing a contract mapping.', 409);
@@ -111,7 +167,15 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
         if (req.method === 'POST' && route === 'intelligence/replay') return send(res, 200, await intelligence.replay(input));
         if (req.method === 'GET' && route === 'autonomy') return send(res, 200, autonomy.status());
         if (req.method === 'GET' && route === 'autonomy/events') return send(res, 200, { items: autonomy.events({ after: url.searchParams.get('after') }) });
-        if (req.method === 'POST' && route === 'autonomy/arm') { const result = await autonomy.arm(input); refreshResearch(); return send(res, 200, result); }
+        if(req.method==='POST'&&route==='autonomy/arm'){
+          const {grantId,...request}=input;
+          if(typeof grantId!=='string'||!grantId)fail('OWNER_GRANT_REQUIRED','Sign the exact paper limits before arming.',403);
+          if(request.authority)fail('AUTHORITY_FIELD_REFUSED','Authority is resolved by the service.',403);
+          if(autonomy.status().mandate?.config.authority?.grantId===grantId)fail('GRANT_ALREADY_ARMED','This grant already armed a session. Sign fresh limits to rearm.',409);
+          const resource=actionDigest(request);
+          authority.authorize({grantId,scope:'paper',resource,action:'arm',operationId:'arm:'+grantId,payload:request});
+          const result=await autonomy.arm({...request,authority:{grantId,resource}});refreshResearch();return send(res,200,result);
+        }
         if (req.method === 'POST' && route === 'autonomy/pause') return send(res, 200, autonomy.pause());
         if (req.method === 'POST' && route === 'autonomy/stop') { intelligence.cancel(); return send(res, 200, autonomy.stop()); }
         if (req.method === 'POST' && route === 'autonomy/tick') return send(res, 200, await autonomy.tick());
@@ -175,16 +239,16 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
       send(res, status, { ok: false, error: { code: error.code ?? 'SERVICE_ERROR', message: status === 500 ? 'The local service could not complete this request.' : error.message, details: error.details ?? {} } });
     } finally { activeRequests.delete(requestDone); finishRequest(); }
   });
-  return { server, ledger, markets, research, intelligence, autonomy, aukora, providers, buildId,
+  return { server, ledger, markets, research, intelligence, autonomy, aukora, providers, weekly, authority, policy, buildId,
     listen: (port = Number(process.env.WOLF_PORT || 4328)) => new Promise((resolveListening, reject) => {
       server.once('error', reject); server.listen(port, '127.0.0.1', () => { server.off('error', reject); resolveListening(server.address()); });
     }),
     close: () => closePromise ??= (async () => {
-      closing = true; clearInterval(researchTimer);
-      autonomy.pause('Wolf Trader is stopping.'); intelligence.cancel();
+      closing = true; clearInterval(researchTimer);clearInterval(scheduledTimer);
+      autonomy.pause('Wolf Trader is stopping.'); weekly.cancel(); intelligence.cancel();
       await new Promise(resolveClosed => { server.close(resolveClosed); server.closeAllConnections(); });
       await Promise.allSettled([...activeRequests]);
-      await composition.close(); await autonomy.close(); await intelligence.close(); await providers.close();
+      await weekly.close(); policy.close?.(); authority.close(); await composition.close(); await autonomy.close(); await intelligence.close(); await providers.close();
       mappings.close(); aukora.close(); ledger.close();
     })(),
   };

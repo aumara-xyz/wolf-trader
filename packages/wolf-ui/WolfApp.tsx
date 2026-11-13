@@ -1,3 +1,5 @@
+import { WeeklyDeskPortals } from './WeeklyDesk'
+import type { OwnerKeyStore } from './owner-key'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { createWolfClient, WolfApiError, type WolfClient } from './api'
 import { WolfSurface } from './WolfSurface'
@@ -11,10 +13,10 @@ const savePending = (id: string | null) => { try { if (id) localStorage.setItem(
 const presentation = () => { try { return JSON.parse(localStorage.getItem('wolf.presentation.v1') ?? '{}') } catch { return {} } }
 export interface AskAumaRequest { message: string; marketId?: string }
 export interface WolfContext { capitalMode: 'DEMO'; selectedMarketId: string | null; selectedAssetId: string | null; selectedOutcome: string | null; selectedMarket: Market | null; portfolio: Portfolio | null; operationPending: boolean }
-export interface WolfAppProps { onAskAuma?: (request: AskAumaRequest) => void | Promise<void>; onContextChange?: (context: WolfContext) => void; apiBase?: string; client?: WolfClient }
+export interface WolfAppProps { onAskAuma?: (request: AskAumaRequest) => void | Promise<void>; onContextChange?: (context: WolfContext) => void; apiBase?: string; client?: WolfClient; ownerKeyStore?: OwnerKeyStore }
 export interface WolfAppHandle { applyResearch(result: unknown): Promise<void>; openMarket(marketId: string, assetId?: string): Promise<void>; refresh(): void; getContext(): WolfContext }
 /** One app pane. The host owns the conversation, model and Spatial shell. */
-export const WolfApp = forwardRef<WolfAppHandle, WolfAppProps>(function WolfApp({ onAskAuma, onContextChange, apiBase, client: hostClient }, ref) {
+export const WolfApp = forwardRef<WolfAppHandle, WolfAppProps>(function WolfApp({ onAskAuma, onContextChange, apiBase, client: hostClient, ownerKeyStore }, ref) {
   const [client] = useState(() => hostClient ?? createWolfClient(apiBase)), [initial] = useState(presentation)
   const [markets, setMarkets] = useState<Market[]>([]), [portfolio, setPortfolio] = useState<Portfolio | null>(null), [activity, setActivity] = useState<Activity[]>([])
   const [expanded, setExpanded] = useState<string | null>(initial.expanded ?? null), [drafts, setDrafts] = useState<Record<string, Draft>>(initial.drafts ?? {})
@@ -131,5 +133,5 @@ export const WolfApp = forwardRef<WolfAppHandle, WolfAppProps>(function WolfApp(
     try { await onAskAuma({ message: `Explain exactly what decides this market: ${question}`, marketId }) }
     catch (error) { setServiceError(`Auma could not be opened. ${errorText(error)}`) }
   }
-  return <div className="wolf-app-pane wolf-theme"><WolfSurface intelligence={<IntelligencePortals client={client} markets={markets} onMarkets={mergeMarkets}/>} markets={markets} portfolio={portfolio} activity={activity} expanded={expanded} drafts={drafts} quotes={quotes} quoteErrors={quoteErrors} quoting={quoting} committing={committing} pendingOperation={pendingOperation} now={now} dataState={dataState} marketError={marketError} serviceError={serviceError} notice={notice} findings={findings} loadingMore={loadingMore} resetOpen={resetOpen} resetBusy={resetBusy} onToggle={id => { setExpanded(current => current === id ? null : id); setNotice('') }} onDraft={changeDraft} onQuote={id => { void requestQuote(id) }} onCommit={id => { void commit(id) }} onRefresh={refresh} onMore={() => { void more() }} onOpenPosition={(marketId, assetId) => { void openPosition(marketId, assetId) }} onResetOpen={setResetOpen} onReset={() => { void reset() }} onResolve={() => { void resolveOperation() }} onExplain={(question, marketId) => { void explain(question, marketId) }} /></div>
+  return <div className="wolf-app-pane wolf-theme"><WolfSurface intelligence={<><WeeklyDeskPortals client={client} onMarkets={mergeMarkets} onAskAuma={onAskAuma} onOpenMarket={id=>openMarket(id)} ownerKeyStore={ownerKeyStore}/><details className="wolf-details"><summary>Specialists, manual experiments & evidence</summary><IntelligencePortals client={client} markets={markets} onMarkets={mergeMarkets} ownerKeyStore={ownerKeyStore}/></details></>} markets={markets} portfolio={portfolio} activity={activity} expanded={expanded} drafts={drafts} quotes={quotes} quoteErrors={quoteErrors} quoting={quoting} committing={committing} pendingOperation={pendingOperation} now={now} dataState={dataState} marketError={marketError} serviceError={serviceError} notice={notice} findings={findings} loadingMore={loadingMore} resetOpen={resetOpen} resetBusy={resetBusy} onToggle={id => { setExpanded(current => current === id ? null : id); setNotice('') }} onDraft={changeDraft} onQuote={id => { void requestQuote(id) }} onCommit={id => { void commit(id) }} onRefresh={refresh} onMore={() => { void more() }} onOpenPosition={(marketId, assetId) => { void openPosition(marketId, assetId) }} onResetOpen={setResetOpen} onReset={() => { void reset() }} onResolve={() => { void resolveOperation() }} onExplain={(question, marketId) => { void explain(question, marketId) }} /></div>
 })

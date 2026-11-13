@@ -5,12 +5,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { loadKiraCore } from '../aukora-vendor/x1/src/kira-core.mjs';
 import { loadNostrCore } from '../aukora-vendor/x1/src/aukora-nostr.mjs';
 import { loadAuraRelayCell } from '../aukora-vendor/x1/src/aukora-aura-relay.mjs';
+import { verifyEvidence, verifyArchive, segmentDescriptor, segmentCommitment, MAX_FULL_EXPORT, MAX_SEGMENT_EVENTS, MAX_SEGMENT_BYTES } from './evidence.mjs';
+export { verifyEvidence, verifyArchive } from './evidence.mjs';
 
 const SCHEMA = 'wolf-evidence/v1';
 const KIND = 9451;
-const MAX_RECORDS = 4096;
+
 const MAX_PAYLOAD = 32768;
-const MAX_EXPORT = 32 * 1024 * 1024;
+
 const clone = value => structuredClone(value);
 const hash = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 const recordLike = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -49,42 +51,12 @@ function loadCells() {
   return { kira, nostr, aura };
 }
 
-/** Cold verification authenticates bytes and ordering, not the truth or profitability of a claim. */
-export function verifyEvidence(bundle, { expectedPubkey, expectedHead } = {}) {
-  const errors = [];
-  try {
-    if (!recordLike(bundle) || bundle.schema !== 'wolf-evidence-bundle/v1' || !Array.isArray(bundle.events) || bundle.events.length > MAX_RECORDS || !hex(bundle.pubkey) || !recordLike(bundle.checkpoint)) fail('BUNDLE_SCHEMA', 'Invalid evidence bundle.');
-    if (Buffer.byteLength(JSON.stringify(bundle)) > MAX_EXPORT) fail('BUNDLE_BOUND', 'Evidence bundle exceeds its size limit.');
-    if (expectedPubkey && bundle.pubkey !== expectedPubkey) fail('ISSUER_MISMATCH', 'The bundle is signed by a different identity.');
-    const { nostr, aura } = loadCells();
-    const seen = new Set(); let previous = null;
-    for (let index = 0; index < bundle.events.length; index++) {
-      const event = bundle.events[index];
-      if (!nostr.verifyEvent(event).valid || event.pubkey !== bundle.pubkey || event.kind !== KIND || seen.has(event.id)) fail('EVENT_SIGNATURE', `Invalid event at ${index + 1}.`);
-      const body = JSON.parse(event.content);
-      if (body.schema !== SCHEMA || body.sequence !== index + 1 || body.previous !== previous || !Array.isArray(body.parents) || body.parents.some(id => !seen.has(id))) fail('EVENT_CHAIN', `Broken causal chain at ${index + 1}.`);
-      if (!Number.isSafeInteger(body.observedAt) || Math.floor(body.observedAt / 1000) !== event.created_at || typeof body.kind !== 'string') fail('EVENT_FIELDS', `Invalid event fields at ${index + 1}.`);
-      seen.add(event.id); previous = event.id;
-    }
-    const checkpoint = bundle.checkpoint;
-    if (!nostr.verifyEvent(checkpoint).valid || checkpoint.pubkey !== bundle.pubkey || checkpoint.kind !== KIND) fail('CHECKPOINT_SIGNATURE', 'Invalid checkpoint signature.');
-    const head = JSON.parse(checkpoint.content), root = aura.root(bundle.events.map(event => event.id)).root;
-    if (head.schema !== 'wolf-checkpoint/v1' || head.size !== bundle.events.length || head.root !== root || head.last !== previous) fail('CHECKPOINT_MISMATCH', 'The retained checkpoint does not match the event prefix.');
-    if (expectedHead) {
-      if (!Number.isSafeInteger(expectedHead.size) || expectedHead.size < 0 || expectedHead.size > bundle.events.length || aura.root(bundle.events.slice(0, expectedHead.size).map(event => event.id)).root !== expectedHead.root) fail('RETAINED_HEAD_MISMATCH', 'The bundle no longer contains the independently retained prefix.');
-    }
-    return { ok: true, events: bundle.events.length, root, head: { size: head.size, root, last: previous, checkpointId: checkpoint.id }, pubkey: bundle.pubkey, identityBound: Boolean(expectedPubkey), retainedHeadChecked: Boolean(expectedHead), authority: 'none', statement: 'Signatures establish authorship and integrity, not source truth or trading performance.' };
-  } catch (error) {
-    errors.push({ code: error.code ?? 'MALFORMED_BUNDLE', message: error.message });
-    return { ok: false, errors, authority: 'none' };
-  }
-}
-
 /** Durable local trading intelligence using the actual pinned Kira, Aura and Nostr cells. */
-export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
+export function createAukoraIntelligence({ dataDir, now = Date.now, segmentSize = 128 } = {}) {
   if (typeof dataDir !== 'string' || !dataDir) throw new TypeError('An isolated intelligence data directory is required.');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   if (lstatSync(dataDir).isSymbolicLink()) fail('DATA_DIRECTORY', 'The intelligence directory must not be a symbolic link.');
+  if (!Number.isInteger(segmentSize) || segmentSize < 1 || segmentSize > MAX_SEGMENT_EVENTS) fail('SEGMENT_SIZE', 'Segment size must be between 1 and 1024.');
   const { kira, nostr, aura } = loadCells();
   const counts = { kira: 1, nostr: 1, aura: 1 };
   const keyPath = join(dataDir, 'identity.key');
@@ -100,6 +72,7 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
   const db = new DatabaseSync(join(dataDir, 'intelligence.sqlite'));
   db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;');
   db.exec(`CREATE TABLE IF NOT EXISTS evidence (sequence INTEGER PRIMARY KEY, id TEXT UNIQUE NOT NULL, event TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS evidence_segments (segment_index INTEGER PRIMARY KEY, descriptor TEXT NOT NULL, checkpoint TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS intelligence_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS memory (id TEXT PRIMARY KEY, text TEXT NOT NULL, sources TEXT NOT NULL, classification TEXT NOT NULL, superseded_by TEXT, created_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS candidate (id TEXT PRIMARY KEY, spec TEXT NOT NULL, created_at INTEGER NOT NULL);
@@ -110,25 +83,70 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
   const events = () => db.prepare('SELECT event FROM evidence ORDER BY sequence').all().map(row => JSON.parse(row.event));
   const sign = draft => { counts.nostr++; return withKey(secret => nostr.signEvent(draft, secret)); };
   const merkle = ids => { counts.aura++; return aura.root(ids).root; };
-  const checkpoint = current => sign({ created_at: Math.floor(now() / 1000), kind: KIND, tags: [['t', 'wolf-checkpoint']], content: JSON.stringify({ schema: 'wolf-checkpoint/v1', size: current.length, root: merkle(current.map(event => event.id)), last: current.at(-1)?.id ?? null }) });
-  let lastCheckpoint = meta('checkpoint');
-  if (lastCheckpoint) {
-    const check = verifyEvidence({ schema: 'wolf-evidence-bundle/v1', pubkey, events: events(), checkpoint: lastCheckpoint }, { expectedPubkey: pubkey });
-    if (!check.ok) { db.close(); fail('EVIDENCE_INTEGRITY', 'Stored intelligence failed verification; preserve its files for recovery.'); }
-  } else {
-    if (events().length) { db.close(); fail('CHECKPOINT_MISSING', 'The retained evidence checkpoint is missing.'); }
-    lastCheckpoint = checkpoint([]); setMeta('checkpoint', lastCheckpoint);
-  }
+  const trustedRows = new Map();
+  let transactionRows = [];
   const transaction = fn => {
+    const priorCheckpoint = lastCheckpoint; transactionRows = [];
     db.exec('BEGIN IMMEDIATE');
-    try { const value = fn(); db.exec('COMMIT'); return value; } catch (error) { db.exec('ROLLBACK'); throw error; }
+    try { const value = fn(); db.exec('COMMIT'); transactionRows = []; return value; } catch (error) { db.exec('ROLLBACK'); lastCheckpoint = priorCheckpoint; for (const id of transactionRows) trustedRows.delete(id); transactionRows = []; throw error; }
   };
+  const checkpoint = descriptor => sign({ created_at: Math.floor(now() / 1000), kind: KIND, tags: [['t', 'wolf-checkpoint']], content: JSON.stringify({ schema: 'wolf-checkpoint/v2', size: descriptor.start + descriptor.size - 1, root: segmentCommitment(descriptor), last: descriptor.last, segment: descriptor }) });
+  const closedSegments = () => db.prepare('SELECT descriptor,checkpoint FROM evidence_segments ORDER BY segment_index').all().map(row => ({ descriptor: JSON.parse(row.descriptor), checkpoint: JSON.parse(row.checkpoint) }));
+  function exportManifest() {
+    const cp = meta('checkpoint'), head = JSON.parse(cp.content);
+    return { schema: 'wolf-evidence-manifest/v2', pubkey, segments: [...closedSegments(), { descriptor: head.segment, checkpoint: cp }], checkpoint: cp, sharing: 'local-export-only' };
+  }
+  function exportSegment(index) {
+    if (!Number.isSafeInteger(index) || index < 0) fail('SEGMENT_INDEX', 'A nonnegative segment index is required.');
+    const current = meta('checkpoint'), head = JSON.parse(current.content);
+    const row = db.prepare('SELECT descriptor,checkpoint FROM evidence_segments WHERE segment_index=?').get(index);
+    const entry = row ? { descriptor: JSON.parse(row.descriptor), checkpoint: JSON.parse(row.checkpoint) } : head.segment.index === index ? { descriptor: head.segment, checkpoint: current } : null;
+    if (!entry) fail('SEGMENT_NOT_FOUND', 'This evidence segment is absent.');
+    return { schema: 'wolf-evidence-segment-bundle/v2', pubkey, ...entry, events: db.prepare('SELECT event FROM evidence WHERE sequence>=? AND sequence<? ORDER BY sequence').all(entry.descriptor.start, entry.descriptor.start + entry.descriptor.size).map(row => JSON.parse(row.event)) };
+  }
+  let lastCheckpoint = meta('checkpoint');
+  try {
+    if (lastCheckpoint) {
+      const oldHead = JSON.parse(lastCheckpoint.content);
+      const check = oldHead.schema === 'wolf-checkpoint/v1'
+        ? verifyEvidence({ schema: 'wolf-evidence-bundle/v1', pubkey, events: events(), checkpoint: lastCheckpoint }, { expectedPubkey: pubkey, onVerifiedEvent: event => trustedRows.set(event.id, { sequence: JSON.parse(event.content).sequence, digest: hash(event) }) })
+        : verifyArchive(exportManifest(), (function* () { for (let i = 0; i <= oldHead.segment.index; i++) yield exportSegment(i); })(), { expectedPubkey: pubkey, onVerifiedEvent: event => trustedRows.set(event.id, { sequence: JSON.parse(event.content).sequence, digest: hash(event) }) });
+      if (!check.ok) fail('EVIDENCE_INTEGRITY', 'Stored intelligence failed verification; preserve its files for recovery.');
+      if (db.prepare('SELECT count(*) AS n FROM evidence').get().n !== oldHead.size) fail('EVIDENCE_INTEGRITY', 'Stored evidence has uncommitted or missing records.');
+      if (oldHead.schema === 'wolf-checkpoint/v1') transaction(() => {
+        // Migration never rewrites or removes event bytes. Keep the exact legacy
+        // checkpoint so a friend can still verify an independently retained head.
+        setMeta('legacyCheckpoint', lastCheckpoint);
+        const current = events(); let offset = 0, index = 0, previousRoot = null;
+        do {
+          const chunk = []; let bytes = 0;
+          while (offset < current.length && chunk.length < segmentSize) {
+            const nextBytes = Buffer.byteLength(JSON.stringify(current[offset]));
+            if (chunk.length && bytes + nextBytes > MAX_SEGMENT_BYTES) break;
+            chunk.push(current[offset++]); bytes += nextBytes;
+          }
+          const descriptor = segmentDescriptor(index, offset - chunk.length + 1, chunk, previousRoot, merkle);
+          lastCheckpoint = checkpoint(descriptor);
+          if (offset < current.length) db.prepare('INSERT INTO evidence_segments(segment_index,descriptor,checkpoint) VALUES(?,?,?)').run(index, JSON.stringify(descriptor), JSON.stringify(lastCheckpoint));
+          previousRoot = segmentCommitment(descriptor); index++;
+        } while (offset < current.length);
+        setMeta('checkpoint', lastCheckpoint); setMeta('segmentSize', segmentSize);
+      });
+    } else {
+      if (db.prepare('SELECT count(*) AS n FROM evidence').get().n) fail('CHECKPOINT_MISSING', 'The retained evidence checkpoint is missing.');
+      lastCheckpoint = checkpoint(segmentDescriptor(0, 1, [], null, merkle));
+      transaction(() => { setMeta('checkpoint', lastCheckpoint); setMeta('segmentSize', segmentSize); });
+    }
+    segmentSize = meta('segmentSize') ?? MAX_SEGMENT_EVENTS;
+    if (!Number.isInteger(segmentSize) || segmentSize < 1 || segmentSize > MAX_SEGMENT_EVENTS) fail('EVIDENCE_INTEGRITY', 'The stored evidence segment bound is invalid.');
+  } catch (error) { db.close(); throw error; }
   // Projections are disposable indexes. Reconstruct them from the verified signed log,
   // so editing a SQLite memory row cannot silently manufacture a trusted recollection.
   transaction(() => {
     db.exec('DELETE FROM memory; DELETE FROM candidate; DELETE FROM evaluation; DELETE FROM external_evidence;');
     setMeta('activeCandidate', null);
-    for (const event of events()) {
+    for (const row of db.prepare('SELECT sequence,id,event FROM evidence ORDER BY sequence').iterate()) {
+      const event = verifiedRow(row);
       const body = JSON.parse(event.content), p = body.payload;
       if (body.kind === 'memory.remembered' || body.kind === 'memory.corrected') {
         db.prepare('INSERT INTO memory(id,text,sources,classification,created_at) VALUES(?,?,?,?,?)').run(event.id, p.text, JSON.stringify(p.sources), JSON.stringify(p.classification), body.observedAt);
@@ -148,17 +166,22 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
   function append(kind, payload, parents = []) {
     kind = shortText(kind, 100, 'Record kind'); payload = bounded(payload);
     if (!Array.isArray(parents) || parents.length > 16 || parents.some(id => !hex(id))) fail('INVALID_PARENTS', 'Supply up to 16 prior evidence IDs.');
-    const current = events();
-    if (current.length >= MAX_RECORDS) fail('EVIDENCE_FULL', 'Export and archive this research history before continuing.');
-    if (Buffer.byteLength(JSON.stringify(current)) + Buffer.byteLength(JSON.stringify(payload)) + 2048 > MAX_EXPORT - 1048576) fail('EVIDENCE_FULL', 'Export and archive this research history before continuing.');
-    const known = new Set(current.map(event => event.id));
-    if (parents.some(id => !known.has(id))) fail('UNKNOWN_PARENT', 'A causal parent is absent from this evidence log.');
+    const head = verifiedHead();
+    if (parents.some(id => !trustedRows.has(id))) fail('UNKNOWN_PARENT', 'A causal parent is absent from this evidence log.');
+    for (const id of parents) getRecord(id);
     const observedAt = now();
     if (!Number.isSafeInteger(observedAt) || observedAt < 0) fail('CLOCK_INVALID', 'The observation clock is invalid.');
-    const body = { schema: SCHEMA, sequence: current.length + 1, kind, observedAt, previous: current.at(-1)?.id ?? null, parents: [...new Set(parents)], payload };
+    const body = { schema: SCHEMA, sequence: head.size + 1, kind, observedAt, previous: head.last, parents: [...new Set(parents)], payload };
     const event = sign({ created_at: Math.floor(observedAt / 1000), kind: KIND, tags: [['t', 'wolf-evidence'], ['d', kind], ...body.parents.map(id => ['e', id])], content: JSON.stringify(body) });
+    let descriptor = head.segment, chunk;
+    if (descriptor.size >= segmentSize || descriptor.size && descriptor.bytes + Buffer.byteLength(JSON.stringify(event)) > MAX_SEGMENT_BYTES) {
+      db.prepare('INSERT INTO evidence_segments(segment_index,descriptor,checkpoint) VALUES(?,?,?)').run(descriptor.index, JSON.stringify(descriptor), JSON.stringify(meta('checkpoint')));
+      descriptor = { index: descriptor.index + 1, start: body.sequence, previousRoot: head.root }; chunk = [];
+    } else chunk = db.prepare('SELECT sequence,id,event FROM evidence WHERE sequence>=? ORDER BY sequence').all(descriptor.start).map(verifiedRow);
     db.prepare('INSERT INTO evidence(sequence,id,event) VALUES(?,?,?)').run(body.sequence, event.id, JSON.stringify(event));
-    current.push(event); lastCheckpoint = checkpoint(current); setMeta('checkpoint', lastCheckpoint);
+    trustedRows.set(event.id, { sequence: body.sequence, digest: hash(event) }); transactionRows.push(event.id);
+    chunk.push(event);
+    lastCheckpoint = checkpoint(segmentDescriptor(descriptor.index, descriptor.start, chunk, descriptor.previousRoot, merkle)); setMeta('checkpoint', lastCheckpoint);
     return { id: event.id, ...body, signer: pubkey, signature: event.sig, authority: 'none' };
   }
   function record(kind, payload, parents = []) { if (typeof kind === 'string' && /^(?:memory|candidate|network)\./.test(kind)) fail('RESERVED_KIND', 'This record kind belongs to a typed intelligence operation.'); return transaction(() => append(kind, payload, parents)); }
@@ -192,7 +215,27 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
     const byId = new Map(rows.map(row => [row.id, row]));
     return { query, method: 'kira-core/term-overlap-ranked', items: ranking.ids.slice(0, limit).map(id => { const row = byId.get(id); return { id, text: row.text, sources: JSON.parse(row.sources), classification: JSON.parse(row.classification), observedAt: row.created_at }; }), authority: 'none', budgetUsed: ranking.budget_used };
   }
-  function exportEvidence() { return { schema: 'wolf-evidence-bundle/v1', pubkey, events: events(), checkpoint: meta('checkpoint'), exportedAt: now(), sharing: 'local-export-only' }; }
+  function exportEvidence() {
+    const storedBytes = db.prepare('SELECT coalesce(sum(length(CAST(event AS BLOB))),0) AS n FROM evidence').get().n;
+    if (storedBytes > MAX_FULL_EXPORT - 1048576) fail('EVIDENCE_EXPORT_BOUND', 'This history needs a manifest plus bounded segment exports; recording remains available.');
+    const manifest = exportManifest(), bundle = { ...manifest, schema: 'wolf-evidence-bundle/v2', events: events(), exportedAt: now() };
+    if (Buffer.byteLength(JSON.stringify(bundle)) > MAX_FULL_EXPORT) fail('EVIDENCE_EXPORT_BOUND', 'This history needs a manifest plus bounded segment exports; recording remains available.');
+    return bundle;
+  }
+  function verifiedHead() { const cp = meta('checkpoint'); if (!cp || hash(cp) !== hash(lastCheckpoint)) fail('EVIDENCE_INTEGRITY', 'The running evidence checkpoint changed outside its signed writer.'); return JSON.parse(cp.content); }
+  function verifiedRow(row) {
+    if (!row) fail('EVIDENCE_INTEGRITY', 'A verified evidence record is missing.');
+    const event = JSON.parse(row.event), known = trustedRows.get(row.id);
+    if (!known || row.id !== event.id || known.sequence !== row.sequence || known.digest !== hash(event)) fail('EVIDENCE_INTEGRITY', 'Stored evidence differs from the exact signed bytes verified at startup or append.');
+    return event;
+  }
+  function getRecord(id) { const event = exportNostrEvent(id); return { id: event.id, ...JSON.parse(event.content), signer: event.pubkey, signature: event.sig, authority: 'none' }; }
+  function readRecords({ after = 0, limit = 100 } = {}) {
+    if (!Number.isSafeInteger(after) || after < 0 || !Number.isInteger(limit) || limit < 1 || limit > 1024) fail('RECORD_PAGE', 'Record pages require a nonnegative cursor and limit from 1 to 1024.');
+    const head = verifiedHead(), rows = db.prepare('SELECT sequence,id,event FROM evidence WHERE sequence>? ORDER BY sequence LIMIT ?').all(after, limit);
+    if (rows.length !== Math.min(limit, Math.max(0, head.size - after)) || rows.some((r, i) => r.sequence !== after + i + 1)) fail('EVIDENCE_INTEGRITY', 'The requested evidence page is incomplete or reordered.');
+    return rows.map(row => { const e = verifiedRow(row); return { id: e.id, ...JSON.parse(e.content), signer: e.pubkey, signature: e.sig, authority: 'none' }; });
+  }
   function importNostrEvent(event) {
     event = bounded(event);
     counts.nostr++;
@@ -208,9 +251,10 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
     });
   }
   function exportNostrEvent(id) {
-    const row = db.prepare('SELECT event FROM evidence WHERE id=?').get(id);
-    if (!row) fail('EVIDENCE_NOT_FOUND', 'That evidence record is absent.');
-    return JSON.parse(row.event);
+    verifiedHead();
+    const row = db.prepare('SELECT sequence,id,event FROM evidence WHERE id=?').get(id);
+    if (!row && !trustedRows.has(id)) fail('EVIDENCE_NOT_FOUND', 'That evidence record is absent.');
+    return verifiedRow(row);
   }
   function createCandidate(spec) {
     spec = bounded(spec, 8192);
@@ -255,12 +299,12 @@ export function createAukoraIntelligence({ dataDir, now = Date.now } = {}) {
     });
   }
   function status() {
-    const head = JSON.parse(meta('checkpoint').content);
+    const head = verifiedHead();
     return { schema: 'wolf-intelligence/v1', state: 'ready', identity: { pubkey, privateKeyExported: false }, cells: [
       { name: 'kira-core', state: 'running', calls: counts.kira, sha256: '4d1be5b5eb8cb2ba943cac58aff3e5ad46f3c3e779af3cc3c1778282f32caa3e', roles: ['capture classification', 'taint clamping', 'recall ranking', 'scope permissions'], maxFuelUsed: String(kira.maxFuelUsed) },
       { name: 'nostr-core', state: 'running', calls: counts.nostr, sha256: '1b00e08461e6c2e9a99e5d32a93389d633aeb776a5d3e4a3e2b173cd6ce82530', roles: ['BIP-340 signatures', 'NIP-01 event verification'], lastFuelUsed: String(nostr.lastFuelUsed) },
       { name: 'aura-relay', state: 'running', calls: counts.aura, sha256: '65eb44c909d0ef97d9f5160a6b90fde54974c42db95af70366428bebd5080dd5', roles: ['RFC6962 Merkle commitment'], lastFuelUsed: String(aura.lastFuelUsed) },
-    ], records: head.size, memoryNotes: db.prepare('SELECT count(*) AS n FROM memory WHERE superseded_by IS NULL').get().n, head: { size: head.size, root: head.root, last: head.last }, network: { protocol: 'NIP-01', importExport: true, relayConnected: false, automaticPublishing: false }, activeCandidate: meta('activeCandidate'), limits: { maxRecords: MAX_RECORDS, privateByDefault: true, authority: 'none', executionContainment: 'Pinned zero-import metered cells only; not the whole Node host.' } };
+    ], records: head.size, memoryNotes: db.prepare('SELECT count(*) AS n FROM memory WHERE superseded_by IS NULL').get().n, head: { schema: head.schema, size: head.size, root: head.root, last: head.last }, network: { protocol: 'NIP-01', importExport: true, relayConnected: false, automaticPublishing: false }, activeCandidate: meta('activeCandidate'), limits: { maxRecords: null, segmentSize, maxSegmentBytes: MAX_SEGMENT_BYTES, maxFullExportBytes: MAX_FULL_EXPORT, archiveExport: true, privateByDefault: true, authority: 'none', executionContainment: 'Pinned zero-import metered cells only; not the whole Node host.' } };
   }
-  return { record, remember, recall, correct, status, exportEvidence, verifyEvidence: (bundle, options = {}) => verifyEvidence(bundle, options), importNostrEvent, exportNostrEvent, createCandidate, evaluateCandidate, promoteCandidate, close: () => db.close() };
+  return { record, remember, recall, correct, status, exportEvidence, exportManifest, exportSegment, getRecord, readRecords, verifyArchive, verifyEvidence: (bundle, options = {}) => verifyEvidence(bundle, options), importNostrEvent, exportNostrEvent, createCandidate, evaluateCandidate, promoteCandidate, close: () => db.close() };
 }

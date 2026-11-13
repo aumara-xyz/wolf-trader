@@ -30,6 +30,8 @@ for (const [from, to] of [
   ['packages/providers', 'app/packages/providers'],
   ['packages/autonomy', 'app/packages/autonomy'],
   ['packages/intelligence', 'app/packages/intelligence'],
+  ['packages/weekly', 'app/packages/weekly'],
+  ['packages/authority', 'app/packages/authority'],
   ['packages/runtime', 'app/packages/runtime'],
   ['packages/runtime-vendor', 'app/packages/runtime-vendor'],
   ['workers', 'app/workers'],
@@ -47,7 +49,7 @@ await writeFile(path.join(contents, 'Info.plist'), `<?xml version="1.0" encoding
 <key>CFBundleDisplayName</key><string>Wolf Trader</string>
 <key>CFBundleIconFile</key><string>Wolf.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
+<key>CFBundleShortVersionString</key><string>0.3.0</string>
 <key>CFBundleVersion</key><string>${Date.now()}</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSMinimumSystemVersion</key><string>13.0</string>

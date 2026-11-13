@@ -202,3 +202,20 @@ test('independent research reserves attempts against the armed mandate and canno
   assert.equal(f.runner.status().phase, 'paused'); assert.equal(f.runner.status().totals.scans, 2);
   await f.restart(); assert.equal(f.runner.status().totals.scans, 2);
 });
+
+test('weekly hypotheses are explicitly experimental and bind the signed book, market rules and final permission', async t => {
+ let valid=true,finalCalls=0;
+ const now=1_800_000_000_000;
+ const signal={id:'weekly-fixture-signal',kind:'weekly-event-hypothesis',bookId:'book-fixture',marketId:'100',assetId:'1001',rulesVersion:digest('Official event rules.'),probability:'0.800000',observedAt:new Date(now).toISOString(),expiresAt:new Date(now+100000).toISOString(),evidenceId:'a'.repeat(64),calibrated:false,authorizesOrder:false};
+ const f=fixture(t,{readSignals:()=>[signal],authorityGate:({final})=>{if(!valid)throw Object.assign(new Error('revoked fixture grant'),{code:'GRANT_REVOKED',status:403});if(final)finalCalls++;}});
+ await f.runner.arm({...f.config,strategy:'weekly-hypothesis/v1',weeklyBookId:'book-fixture'});
+ await f.runner.tick();assert.equal(f.runner.status().totals.orders,1);assert.equal(finalCalls,1);assert.equal(f.runner.status().lastDecision.reason,'experimental-weekly-hypothesis');
+ valid=false;f.advance();f.set({ask:'0.60',bid:'0.58'});await f.runner.tick();assert.equal(f.runner.status().totals.orders,1);
+});
+
+test('an altered weekly book or a classifier score cannot become an experimental entry',()=>{
+ const now=1_800_000_000_000, config=resolveMandate({capitalMode:'DEMO',strategy:'weekly-hypothesis/v1',marketIds:['100'],weeklyBookId:'book-fixture'},now);
+ const base={config,observations:[{marketId:'100',assetId:'1001',rulesVersion:'rules',bid:'0.48',ask:'0.50'}],previous:{},positions:[],managed:{},now};
+ const signal={id:'weekly-signal',kind:'weekly-event-hypothesis',bookId:'different-book',marketId:'100',assetId:'1001',rulesVersion:'rules',probability:'0.9',observedAt:new Date(now).toISOString(),expiresAt:new Date(now+10000).toISOString(),evidenceId:'a'.repeat(64),calibrated:false};
+ assert.equal(chooseProposal({...base,signals:[signal]}),null);assert.equal(chooseProposal({...base,signals:[{...signal,bookId:'book-fixture',kind:'classification'}]}),null);
+});

@@ -18,6 +18,20 @@ export function createForecastMappings({ dataDir, markets, aukora, now = Date.no
   const verified = new Map(); let retainedHead = null, closed = false;
 
   function trustedRecords() {
+    if(aukora.readRecords&&aukora.getRecord){
+      const head=aukora.status().head, records=new Map();let after=0,previous=null,batch;
+      if(retainedHead&&head.size<retainedHead.size)fail('The mapping evidence history was rolled back.');
+      if(retainedHead?.last)aukora.getRecord(retainedHead.last);
+      do{
+        batch=aukora.readRecords({after,limit:1024});
+        for(const body of batch){
+          if(body.sequence!==after+1||body.previous!==previous||body.signer!==identity||body.parents.some(id=>!records.has(id)))fail('Mapping evidence lineage changed.');
+          records.set(body.id,{...body,evidenceId:body.id});after=body.sequence;previous=body.id;
+        }
+      }while(batch.length);
+      if(after!==head.size||previous!==head.last)fail('The mapping history is incomplete.');
+      retainedHead={size:after,last:previous};return records;
+    }
     const bundle = aukora.exportEvidence();
     if (bundle.pubkey !== identity || !Array.isArray(bundle.events) || bundle.events.length > 4096) fail('The mapping evidence identity or history changed.');
     const records = new Map(), ids = []; let previous = null;

@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
+import { validateOllamaPort, requireFreeOllamaPort, stopOwnedOllama } from '../packages/providers/ollama-lifecycle.mjs';
 
 const runtime = path.resolve(process.argv[2]);
 const input = JSON.parse(await Bun.stdin.text());
@@ -13,24 +14,28 @@ const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), input.timeoutMs);
 let ownedServer: ReturnType<typeof spawn> | undefined;
 const shutdown = () => { controller.abort(); ownedServer?.kill('SIGTERM'); };
-process.once('SIGTERM', () => { shutdown(); process.exit(143); });
-process.once('SIGINT', () => { shutdown(); process.exit(130); });
+process.once('SIGTERM', shutdown);
+process.once('SIGINT', shutdown);
 const started = Date.now();
-const base = 'http://127.0.0.1:11437';
+const port = validateOllamaPort(process.env.WOLF_OLLAMA_PORT);
+const base = `http://127.0.0.1:${port}`;
 async function modelStatus() {
   try { const r = await fetch(base + '/api/tags', { signal: AbortSignal.timeout(1500) }); return r.ok ? await r.json() : null; } catch { return null; }
 }
 try {
   // Only the app-owned, cloud-disabled local runtime is started here. Never start another user's server.
+  await requireFreeOllamaPort(port);
   let models = await modelStatus();
+  if (models) throw new Error('The configured local model port is already occupied; Wolf will not reuse another server.');
   if (!models) {
     const binary = process.env.WOLF_OLLAMA_PATH || 'ollama';
     // Ollama requires the real OS home for its own installation identity. It is
     // preserved, never redirected. Model storage is isolated and cloud is disabled.
-    ownedServer = spawn(binary, ['serve'], { env: { PATH: process.env.PATH, HOME: homedir(), OLLAMA_HOST: '127.0.0.1:11437', OLLAMA_MODELS: path.join(runtime, 'ollama-models'), OLLAMA_NO_CLOUD: '1', OLLAMA_NOHISTORY: '1' }, stdio: 'ignore' });
+    ownedServer = spawn(binary, ['serve'], { env: { PATH: process.env.PATH, HOME: homedir(), OLLAMA_HOST: `127.0.0.1:${port}`, OLLAMA_MODELS: path.join(runtime, 'ollama-models'), OLLAMA_NO_CLOUD: '1', OLLAMA_NOHISTORY: '1' }, stdio: 'ignore' });
     ownedServer.on('error', () => controller.abort());
     for (let i = 0; i < 30 && !models; i++) { controller.signal.throwIfAborted(); await Bun.sleep(200); models = await modelStatus(); }
   }
+  if (!ownedServer?.pid || ownedServer.exitCode !== null || ownedServer.signalCode !== null) throw Error('The owned local model server did not remain running.');
   const model = models?.models?.find((m: { name: string }) => m.name === 'qwen3:1.7b');
   if (!model) throw new Error('The local Dexter model is not installed. Run the provider setup with --dexter.');
   const pins = JSON.parse(await readFile(path.join(import.meta.dir, '../packages/providers/pins.json'), 'utf8'));
@@ -99,5 +104,5 @@ try {
   process.exitCode = 1;
 } finally {
   clearTimeout(timeout);
-  ownedServer?.kill('SIGTERM');
+  await stopOwnedOllama(ownedServer);
 }

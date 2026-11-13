@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { SCALE, units, decimal, fail } from '../wolf-core/fixed.mjs';
 
 export const STRATEGIES = Object.freeze([
+  { id: 'weekly-hypothesis/v1', title: 'Weekly research hypotheses', forecast: false, description: 'Experimental paper actions from an explicitly uncalibrated, frozen weekly research book. No proven predictive edge.' },
   { id: 'quote-momentum/v1', title: 'Quote momentum baseline', forecast: false, description: 'Tests whether a recent executable quote move continues. It is a disclosed experimental rule, not a prediction model or a proven edge.' },
   { id: 'forecast-edge/v1', title: 'Approved probability forecast', forecast: true, description: 'Uses only a separately approved probability artifact and calibration report. Text relevance and classifier scores cannot enter this strategy.' },
   { id: 'kronos-direction/v1', title: 'Kronos threshold experiment', forecast: true, description: 'Tests an underlying-price forecast against an explicitly approved binary-contract threshold mapping. It does not estimate the contract’s win probability.' },
@@ -29,6 +30,7 @@ export function resolveMandate(input, now) {
     maxEntryPrice: amount('maxEntryPrice', '0.80', '0.99'),
     minEdge: amount('minEdge', '0.05', '0.50'), maxHoldMinutes: integer('maxHoldMinutes', 30, 1, 10080), maxDataAgeMs: integer('maxDataAgeMs', 5000, 100, 5000),
     maxSignalAgeMs: integer('maxSignalAgeMs', 300000, 1000, 3600000), manageExistingPositions: input.manageExistingPositions === true,
+    authority: input.authority ?? null, weeklyBookId: strategy === 'weekly-hypothesis/v1' ? input.weeklyBookId : null,
     forecastArtifact: strategy === 'forecast-edge/v1' ? input.forecastArtifact : null,
     forecastMappingId: strategy === 'kronos-direction/v1' ? input.forecastMappingId : null,
     createdAt: new Date(now).toISOString(), expiresAt: new Date(now + integer('durationMinutes', 60, 1, 10080) * 60000).toISOString(),
@@ -37,6 +39,7 @@ export function resolveMandate(input, now) {
   if (units(config.perOrder) > units(config.maxMarketExposure) || units(config.maxMarketExposure) > units(config.maxExposure) || units(config.maxEventExposure) > units(config.maxExposure)) fail('MANDATE_LIMIT_INVALID', 'Per-order, market and event limits must fit within the session exposure limit.');
   if (strategy === 'forecast-edge/v1' && (typeof config.forecastArtifact !== 'string' || !/^[a-f0-9]{64}$/.test(config.forecastArtifact))) fail('APPROVED_FORECAST_REQUIRED', 'Select an approved, calibrated probability artifact.');
   if (strategy === 'kronos-direction/v1' && (typeof config.forecastMappingId !== 'string' || !/^[A-Za-z0-9._:-]{1,120}$/.test(config.forecastMappingId))) fail('APPROVED_MAPPING_REQUIRED', 'Select an owner-approved exact contract mapping.');
+  if (strategy === 'weekly-hypothesis/v1' && (typeof config.weeklyBookId !== 'string' || !/^[A-Za-z0-9._:-]{1,120}$/.test(config.weeklyBookId))) fail('WEEKLY_BOOK_REQUIRED', 'Select an exact completed weekly research book.');
   return config;
 }
 
@@ -72,6 +75,14 @@ export function chooseProposal({ config, observations, previous, positions, mana
       if (!prior || prior.rulesVersion !== current.rulesVersion || Date.parse(current.at) - Date.parse(prior.at) < config.intervalSeconds * 1000 || Date.parse(current.at) - Date.parse(prior.at) > config.intervalSeconds * 3000) continue;
       const midpoint = (units(current.ask) + units(current.bid)) / 2n, old = (units(prior.ask) + units(prior.bid)) / 2n;
       if (midpoint - old >= units(config.minMomentum)) return { side: 'BUY', marketId: current.marketId, assetId: current.assetId, amount: config.perOrder, reason: 'momentum-baseline-entry', observationId: current.id, priorObservationId: prior.id, observedMove: decimal(midpoint - old), forecast: false };
+    } else if (config.strategy === 'weekly-hypothesis/v1') {
+      const candidate=signals.find(s=>s?.kind==='weekly-event-hypothesis'&&s.bookId===config.weeklyBookId&&s.marketId===current.marketId&&s.assetId===current.assetId&&s.rulesVersion===current.rulesVersion&&s.calibrated===false&&s.invalidated!==true&&typeof s.evidenceId==='string');
+      if(!candidate)continue;
+      const at=Date.parse(candidate.observedAt),expiry=Date.parse(candidate.expiresAt);
+      if(!Number.isFinite(at)||!Number.isFinite(expiry)||at>now||now-at>config.maxSignalAgeMs||expiry<=now)continue;
+      let p;try{p=units(candidate.probability);}catch{continue;}
+      if(p<=0n||p>=SCALE||p-units(current.ask)<units(config.minEdge))continue;
+      return {side:'BUY',marketId:current.marketId,assetId:current.assetId,amount:config.perOrder,reason:'experimental-weekly-hypothesis',observationId:current.id,signalId:candidate.id,signalDigest:signalDigest(candidate),probability:candidate.probability,signalExpiresAt:candidate.expiresAt,weeklyHypothesis:true,calibrated:false,forecast:false};
     } else if (config.strategy === 'forecast-edge/v1') {
       if (!forecastApproval || forecastApproval.artifactHash !== config.forecastArtifact || forecastApproval.status !== 'approved' || forecastApproval.task !== 'event-probability' || !/^[a-f0-9]{64}$/.test(forecastApproval.calibrationReportHash ?? '') || !Number.isFinite(Date.parse(forecastApproval.expiresAt)) || Date.parse(forecastApproval.expiresAt) <= now) continue;
       const candidate = signals.find(signal => signal?.kind === 'event-probability' && signal.marketId === current.marketId && signal.assetId === current.assetId && signal.artifactHash === forecastApproval.artifactHash && signal.calibrationReportHash === forecastApproval.calibrationReportHash && signal.rulesVersion === current.rulesVersion && typeof signal.id === 'string' && signal.id.length <= 200 && Array.isArray(signal.sources) && signal.sources.length > 0);

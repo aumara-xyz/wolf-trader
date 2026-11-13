@@ -115,6 +115,29 @@ export function validateTypedAnswers(answers, questions) {
   return answers;
 }
 
+
+export function normalizeEventForecastInput(input) {
+  const m = input?.market;
+  if (!m || typeof m.id !== 'string' || !/^\d{1,100}$/.test(m.id) || !Array.isArray(m.outcomes) || m.outcomes.length !== 2 || m.outcomes.some(o => typeof o.assetId !== 'string' || !/^\d{1,100}$/.test(o.assetId)) || m.outcomes[0].assetId === m.outcomes[1].assetId) error('PROVIDER_INPUT', 'A canonical binary market with exact outcome IDs is required.');
+  const target = m.outcomes.find(o => o.assetId === (input.assetId ?? m.outcomes[0].assetId));
+  if (!target) error('PROVIDER_INPUT', 'The forecast target must belong to this market.');
+  const market = { id: m.id, question: bounded(m.question, 'Market question', 1000), rules: bounded(m.rules, 'Complete market rules', 12000), rulesVersion: bounded(m.rulesVersion, 'Rules version', 150), endDate: m.endDate, observedAt: m.receivedAt ?? null, referencePrices: m.outcomes.map(o => ({ assetId: o.assetId, name: o.name, price: o.price ?? null, priceType: o.priceType ?? 'source-reference' })) };
+  if (!Number.isFinite(Date.parse(m.endDate))) error('PROVIDER_INPUT', 'A source contract deadline is required.');
+  if (!Array.isArray(input.sources) || input.sources.length < 1 || input.sources.length > 8) error('PROVIDER_INPUT', 'Forecasting requires 1–8 attributed source records.');
+  const ids = new Set();
+  const sources = input.sources.map(s => { let url; try { url = new URL(s.url); } catch { error('PROVIDER_INPUT', 'Every source requires an HTTPS URL.'); } if (url.protocol !== 'https:' || url.username || url.password) error('PROVIDER_INPUT', 'Source URLs must use HTTPS without credentials.'); const id = bounded(s.id, 'Source ID', 150); if (ids.has(id)) error('PROVIDER_INPUT', 'Source IDs must be unique.'); ids.add(id); return { id, url: url.href, title: String(s.title ?? '').slice(0, 300), text: bounded(s.text, 'Source excerpt', 12000), observedAt: s.observedAt ?? null, excerpted: s.excerpted === true, contentHash: s.contentHash ?? hash(s.text) }; });
+  const request = { schema: 'wolf-event-forecast-input/v1', market, targetOutcome: { assetId: target.assetId, name: bounded(target.name, 'Outcome name', 100) }, sources, research: typeof input.research === 'string' ? input.research.slice(0, 3500) : '', informationCutoff: input.informationCutoff ?? null, calibration: 'uncalibrated' };
+  if (Buffer.byteLength(JSON.stringify(request)) > 28000) error('PROVIDER_INPUT', 'Forecast context exceeds the bounded local model window; supply explicit source excerpts.');
+  return request;
+}
+export function validateEventForecast(value, request) {
+  if (!value || typeof value !== 'object' || typeof value.probability !== 'number' || !Number.isFinite(value.probability) || value.probability < 0 || value.probability > 1 || typeof value.abstain !== 'boolean') error('PROVIDER_RESPONSE_INVALID', 'The event forecast did not return a bounded probability and abstention decision.', 502);
+  const ids = new Set(request.sources.map(s => s.id));
+  if (!Array.isArray(value.sourceIds) || !value.sourceIds.length || value.sourceIds.length > 8 || new Set(value.sourceIds).size !== value.sourceIds.length || value.sourceIds.some(id => !ids.has(id))) error('PROVIDER_RESPONSE_INVALID', 'The forecast cited an unknown or repeated source.', 502);
+  for (const key of ['confidence', 'ruleClarity']) if (value[key] !== undefined && (typeof value[key] !== 'number' || !Number.isFinite(value[key]) || value[key] < 0 || value[key] > 1)) error('PROVIDER_RESPONSE_INVALID', 'Model self-assessments must be bounded numeric values.', 502);
+  return { probability: value.probability, ...(value.confidence !== undefined ? { confidence: value.confidence } : {}), ...(value.ruleClarity !== undefined ? { ruleClarity: value.ruleClarity } : {}), diagnosticMeaning: 'Confidence and ruleClarity are model self-assessments; neither measures event odds or calibrated accuracy.', rationale: bounded(value.rationale, 'Forecast rationale', 2000), countercase: bounded(value.countercase, 'Forecast countercase', 2000), invalidation: bounded(value.invalidation, 'Forecast invalidation condition', 2000), sourceIds: value.sourceIds, abstain: value.abstain, targetOutcome: request.targetOutcome, marketId: request.market.id, rulesVersion: request.market.rulesVersion, calibration: 'uncalibrated', forecastType: 'explicit-event-estimate', derivedFromClassifier: false, authorizesOrder: false, model: value.model, modelDigest: value.modelDigest, promptVersion: value.promptVersion, elapsedMs: value.elapsedMs, usage: value.usage };
+}
+
 /** Models supply evidence and bounded judgments. No provider receives a ledger or order capability. */
 export function createProviderRegistry({ dataDir, config = {}, env = process.env, fetchImpl = globalThis.fetch } = {}) {
   const runtimeDir = path.resolve(config.runtimeDir ?? providerRuntimeDir(env));
@@ -151,6 +174,7 @@ export function createProviderRegistry({ dataDir, config = {}, env = process.env
       { id: 'kronos', label: 'Kronos', role: 'OHLCV forecasting', installed: !!diagnostics?.versions?.torch, configured: !!diagnostics?.kronos, available: !!diagnostics?.versions?.torch && !!diagnostics?.kronos, reason: diagnostics?.kronos ? 'Pinned Kronos-mini, local CPU inference.' : 'Kronos weights or Python runtime are not installed.' },
       { id: 'laya', label: 'Laya', role: 'Local contract/evidence classification', installed: !!diagnostics?.versions?.laya, configured: !!diagnostics?.laya, available: !!diagnostics?.versions?.laya && !!diagnostics?.laya, reason: diagnostics?.laya ? `Pinned English checkpoint via ${diagnostics.layaEngine}.` : 'Install the pinned Laya checkpoint or import its verified ONNX export.' },
       { id: 'jev', label: 'Jev', role: 'Hosted typed semantic judgment', installed: true, configured: jkey && config.allowPaidProviders === true, available: jkey && config.allowPaidProviders === true, reason: !jkey ? 'An explicitly supplied TypeSafe API key is required.' : config.allowPaidProviders !== true ? 'Paid provider use is disabled.' : 'Configured official TypeSafe endpoint; each call is budgeted by the caller.' },
+      { id: 'event-forecast', label: 'Qwen · event forecast', role: 'Explicit uncalibrated outcome estimate', installed: dexterSource, configured: dexterSource && modelManifest, available: dexterSource && modelManifest, reason: dexterSource && modelManifest ? 'Pinned local Qwen; explicit event estimates with source citations and abstention.' : 'Install the pinned Dexter/Qwen runtime first.' },
       { id: 'nautilus', label: 'NautilusTrader', role: 'Independent historical execution replay', installed: !!diagnostics?.versions?.nautilus_trader, configured: !!diagnostics?.versions?.nautilus_trader, available: !!diagnostics?.versions?.nautilus_trader, reason: diagnostics?.versions?.nautilus_trader ? 'Actual BacktestEngine with frozen intents and explicit costs.' : 'Install the local Python replay runtime.' },
     ];
     return items.map(item => ({ ...item, diagnosticsObservedAt: diagnosticsAt ? new Date(diagnosticsAt).toISOString() : null, diagnosticsPending: !!diagnosticsPromise, verified: verified.has(item.id), lastRun: verified.get(item.id) ?? null, pin: PINS[item.id], fundsAccess: false }));
@@ -210,7 +234,16 @@ export function createProviderRegistry({ dataDir, config = {}, env = process.env
     const result = await task;
     return record('dexter', { question, sources: records }, result);
   }
-  return { status, research, forecast, classify, replay, close() { lifetime.abort(); worker.close(); } };
+  async function forecastEvent(input = {}) {
+    const request = normalizeEventForecastInput(input);
+    const signal = input.signal ? AbortSignal.any([input.signal, lifetime.signal]) : lifetime.signal;
+    const task = researchQueue.then(() => runEventForecast({ runtimeDir, env, request, signal, timeoutMs: number(config.eventForecastTimeoutMs ?? 120000, 'Event forecast time budget', 1000, 300000) }));
+    researchQueue = task.catch(() => {});
+    const raw = await task;
+    if (raw.modelDigest !== PINS.dexter.modelDigest || raw.promptVersion !== 'wolf-event-forecast/v1') error('PROVIDER_MODEL_CHANGED', 'The forecast model or template changed.', 502);
+    return record('event-forecast', request, validateEventForecast(raw, request));
+  }
+  return { status, research, forecast, forecastEvent, classify, replay, close() { lifetime.abort(); worker.close(); } };
 }
 
 async function probeDexter(runtimeDir,env) {
@@ -230,11 +263,13 @@ async function runDexter({ runtimeDir, env, question, sources, signal, timeoutMs
   if (!await exists(path.join(runtimeDir, 'dexter/src/agent/agent.ts'))) error('PROVIDER_NOT_INSTALLED', 'Install pinned Dexter with npm run wolf:setup.', 503);
   const runDir = path.join(runtimeDir, 'runs', randomUUID()); await mkdir(runDir, { recursive: true, mode: 0o700 });
   const bun = env.WOLF_BUN_PATH || (await exists(path.join(homedir(), '.bun/bin/bun')) ? path.join(homedir(), '.bun/bin/bun') : 'bun');
+  const port = number(env.WOLF_OLLAMA_PORT ?? 11437, 'Local model port', 1024, 65535);
+  if (!Number.isInteger(port)) error('PROVIDER_CONFIG', 'The local model port must be an integer.');
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new ProviderError('PROVIDER_CANCELLED', 'Research cancelled.', 409)); return; }
-    const child = spawn(bun, [path.join(ROOT, 'workers/dexter.ts'), runtimeDir], { cwd: runDir, env: { ...safeEnvironment(env), OLLAMA_BASE_URL: 'http://127.0.0.1:11437', OLLAMA_NO_CLOUD: '1', WOLF_OLLAMA_PATH: env.WOLF_OLLAMA_PATH || (process.platform === 'darwin' ? '/opt/homebrew/bin/ollama' : 'ollama') }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(bun, [path.join(ROOT, 'workers/dexter.ts'), runtimeDir], { cwd: runDir, env: { ...safeEnvironment(env), OLLAMA_BASE_URL: `http://127.0.0.1:${port}`, WOLF_OLLAMA_PORT: String(port), OLLAMA_NO_CLOUD: '1', WOLF_OLLAMA_PATH: env.WOLF_OLLAMA_PATH || (process.platform === 'darwin' ? '/opt/homebrew/bin/ollama' : 'ollama') }, stdio: ['pipe', 'pipe', 'pipe'] });
     let output = '', settled = false;
-    const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); child.kill('SIGTERM'); fn(value); };
+    const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); if (child.exitCode !== null || child.signalCode !== null) { fn(value); return; } const killed = setTimeout(() => { child.kill('SIGKILL'); }, 5000); child.once('close', () => { clearTimeout(killed); fn(value); }); child.kill('SIGTERM'); };
     const cancel = () => finish(reject, new ProviderError('PROVIDER_CANCELLED', 'Research cancelled.', 409));
     const timer = setTimeout(() => finish(reject, new ProviderError('PROVIDER_TIMEOUT', 'Dexter exceeded the research time budget.', 504)), timeoutMs);
     signal?.addEventListener('abort', cancel, { once: true });
@@ -247,5 +282,24 @@ async function runDexter({ runtimeDir, env, question, sources, signal, timeoutMs
       else finish(resolve, response.result);
     });
     child.stdin.end(JSON.stringify({ question, sources, timeoutMs }));
+  });
+}
+
+async function runEventForecast({ runtimeDir, env, request, signal, timeoutMs }) {
+  if (!await exists(path.join(runtimeDir, 'dexter-source.json'))) error('PROVIDER_NOT_INSTALLED', 'Install the pinned local model with npm run wolf:setup.', 503);
+  const bun = env.WOLF_BUN_PATH || (await exists(path.join(homedir(), '.bun/bin/bun')) ? path.join(homedir(), '.bun/bin/bun') : 'bun');
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new ProviderError('PROVIDER_CANCELLED', 'Event forecasting cancelled.', 409)); return; }
+    const child = spawn(bun, [path.join(ROOT, 'workers/weekly-forecast.ts'), runtimeDir], { cwd: runtimeDir, env: { ...safeEnvironment(env), WOLF_OLLAMA_PORT: String(number(env.WOLF_OLLAMA_PORT ?? 11437, 'Local model port', 1024, 65535)), WOLF_OLLAMA_PATH: env.WOLF_OLLAMA_PATH || (process.platform === 'darwin' ? '/opt/homebrew/bin/ollama' : 'ollama') }, stdio: ['pipe', 'pipe', 'pipe'] });
+    let output = '', settled = false;
+    const finish = (fn, value) => { if (settled) return; settled = true; clearTimeout(timer); signal?.removeEventListener('abort', cancel); if (child.exitCode !== null || child.signalCode !== null) { fn(value); return; } const killed = setTimeout(() => { child.kill('SIGKILL'); }, 5000); child.once('close', () => { clearTimeout(killed); fn(value); }); child.kill('SIGTERM'); };
+    const cancel = () => finish(reject, new ProviderError('PROVIDER_CANCELLED', 'Event forecasting cancelled.', 409));
+    const timer = setTimeout(() => finish(reject, new ProviderError('PROVIDER_TIMEOUT', 'Event forecasting exceeded its time budget.', 504)), timeoutMs);
+    signal?.addEventListener('abort', cancel, { once: true });
+    child.stdout.setEncoding('utf8'); child.stdout.on('data', chunk => { output += chunk; if (output.length > 150000) finish(reject, new ProviderError('PROVIDER_RESPONSE_SIZE', 'Event forecasting exceeded its response limit.')); });
+    child.stderr.on('data', () => {}); child.stdin.on('error', () => {});
+    child.on('error', () => finish(reject, new ProviderError('PROVIDER_NOT_INSTALLED', 'Bun is unavailable for local event forecasting.')));
+    child.on('exit', () => { let response; try { response = JSON.parse(output.trim().split('\n').findLast(line => line.startsWith('{"wolfResult":')) ?? 'null'); } catch {} if (!response?.ok) finish(reject, new ProviderError('PROVIDER_WORKER_FAILED', response?.error ?? 'Event forecasting did not return a completed result.')); else finish(resolve, response.result); });
+    child.stdin.end(JSON.stringify({ request, timeoutMs }));
   });
 }

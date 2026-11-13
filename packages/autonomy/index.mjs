@@ -8,7 +8,7 @@ import { resolveMandate, chooseProposal, mappingIsCurrent, STRATEGIES, signedUni
 import { evaluateReplay } from './replay.mjs';
 
 /** Durable, local PAPER governor. No model, wallet or live-order credentials are held here. */
-export function createAutonomyService({ dataDir, ledger, markets, intelligence, scan, readSignals, approvedForecasts, approvedMappings, now = Date.now } = {}) {
+export function createAutonomyService({ dataDir, ledger, markets, intelligence, scan, readSignals, approvedForecasts, approvedMappings, authorityGate, now = Date.now } = {}) {
   if (!dataDir || !ledger?.portfolio || !ledger?.commitDemo || !markets?.market || !markets?.book) throw new TypeError('Autonomy needs its own data directory, canonical paper ledger and public market adapter.');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(join(dataDir, 'wolf-autonomy.sqlite'));
@@ -99,6 +99,7 @@ export function createAutonomyService({ dataDir, ledger, markets, intelligence, 
       const latest = read(); ownership(latest);
       if (latest.generation !== generation || latest.pending) fail('CONTROL_CHANGED', 'The controls changed while the mandate was being checked.', 409);
       if (ledger.portfolio().account.epoch !== portfolio.account.epoch || ledger.portfolio().account.revision !== portfolio.account.revision) fail('ACCOUNT_CHANGED', 'The paper account changed. Review the mandate again.', 409);
+      authorityGate?.({config,action:'arm',final:false});
       const id = randomUUID(), mandate = { id, config, accountEpoch: portfolio.account.epoch, accountRevisionAtArm: portfolio.account.revision, equityAtArm: portfolio.estimatedTotal, cashAtArm: portfolio.account.cash, bindings, configDigest: digest(config) };
       run('INSERT INTO mandates VALUES(?,?)', id, JSON.stringify(mandate));
       save({ phase: 'armed', generation: generation + 1, reason: null, mandate, pending: null, lastDecision: null, lastTickAt: null, totals: { orders: 0, turnover: '0.000000', scans: 0 }, previous: {}, managed: {}, owner: instance, performance: { baseline: 'hold cash / no new trades', baselineEquity: portfolio.estimatedTotal, equity: portfolio.estimatedTotal, change: '0.000000', observedAt: new Date(now()).toISOString() } });
@@ -172,6 +173,8 @@ export function createAutonomyService({ dataDir, ledger, markets, intelligence, 
       const eventExposure = portfolio.positions.filter(p => (mandate.bindings[p.marketId]?.eventId ?? `market:${p.marketId}`) === event).reduce((sum, p) => sum + units(p.costBasis), 0n);
       if (eventExposure + debit > units(c.maxEventExposure)) fail('EVENT_EXPOSURE_LIMIT', 'The related-event exposure limit would be exceeded.', 409);
     }
+    if (proposal.weeklyHypothesis && units(proposal.probability)-units(quote.averagePrice)<units(c.minEdge)) fail('WEEKLY_PRICE_CHANGED','The executable price no longer meets the frozen hypothesis rule.',409);
+    authorityGate?.({config:c,quote,proposal,operationId:executionFacts?.operationId??null,final:Boolean(executionFacts)});
     return state;
   }
   function settleIntent(intent, result) {
@@ -228,7 +231,7 @@ export function createAutonomyService({ dataDir, ledger, markets, intelligence, 
     const id = `auto-${randomUUID()}`, intent = { id, mandateId: state.mandate.id, accountEpoch: state.mandate.accountEpoch, configDigest: state.mandate.configDigest, proposal, quote, at: new Date(now()).toISOString() };
     tx(() => { const latest = guard(state.generation, quote, proposal); if (latest.pending) fail('OPERATION_UNRESOLVED', 'Another operation is unresolved.', 409); run('INSERT INTO intents VALUES(?,?,?,?)', id, state.mandate.id, 'pending', JSON.stringify(intent)); latest.pending = { id, marketId: quote.marketId, side: quote.side, reservedCash: quote.debit }; save(latest); log('autonomy.intent', { intent }); });
     try {
-      const result = await ledger.commitDemo({ quoteId: quote.id, expectedRevision: quote.accountRevision, operationId: id }, { beforeEffect: facts => guard(state.generation, quote, proposal, facts) });
+      const result = await ledger.commitDemo({ quoteId: quote.id, expectedRevision: quote.accountRevision, operationId: id }, { beforeEffect: facts => guard(state.generation, quote, proposal, { ...facts, operationId:id }) });
       settleIntent(intent, result);
     } catch (error) {
       const actual = await ledger.operation(id);
