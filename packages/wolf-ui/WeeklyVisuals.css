@@ -1,0 +1,48 @@
+.wolf-theme .wolf-weekly-showcase{margin:24px 0 30px;padding-top:24px;border-top:1px solid rgba(203,196,235,.12)}
+.wolf-theme .wolf-showcase-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.wolf-theme .wolf-visual-eyebrow{display:block;color:rgba(220,217,238,.55);font-size:10px;font-weight:500;letter-spacing:.13em;text-transform:uppercase}
+.wolf-theme .wolf-showcase-heading h3{margin:8px 0 0;font-size:24px;font-weight:400;letter-spacing:-.035em;color:#e7e3ef}
+.wolf-theme .wolf-sample-badge{flex-shrink:0;border:1px solid rgba(217,181,116,.26);border-radius:20px;padding:6px 10px;color:#d8bb89;font-size:10px;letter-spacing:.05em;background:rgba(187,145,71,.06)}
+.wolf-theme .wolf-showcase-caption{max-width:700px;margin:12px 0 20px;font-size:12px;line-height:1.7;color:rgba(220,217,238,.56)}
+.wolf-theme .wolf-scenario-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wolf-theme .wolf-scenario{--wolf-visual-accent:#d5b77f;min-width:0;padding:18px 16px 0;border:1px solid color-mix(in srgb,var(--wolf-visual-accent) 17%,transparent);border-radius:14px;background:linear-gradient(150deg,color-mix(in srgb,var(--wolf-visual-accent) 6%,transparent),rgba(13,16,27,.16) 70%);overflow:hidden}
+.wolf-theme .wolf-scenario--violet{--wolf-visual-accent:#b4a4df}.wolf-theme .wolf-scenario--mint{--wolf-visual-accent:#93cbbd}
+.wolf-theme .wolf-scenario-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:19px}
+.wolf-theme .wolf-scenario-glyph{width:35px;height:35px;stroke:var(--wolf-visual-accent);stroke-width:1.15;stroke-linecap:round;stroke-linejoin:round}
+.wolf-theme .wolf-scenario-number{color:var(--wolf-visual-accent);opacity:.4;font-size:11px;font-variant-numeric:tabular-nums}
+.wolf-theme .wolf-scenario h4{color:#e7e3ef;min-height:66px;margin:9px 0 18px;font-size:15px;line-height:1.5;letter-spacing:-.015em;font-weight:400}
+.wolf-theme .wolf-scenario-score{display:flex;align-items:center;gap:9px;margin-left:-5px}
+.wolf-theme .wolf-scenario-score__caption strong{display:block;color:rgba(231,227,239,.78);font-size:10px;font-weight:400;line-height:1.5}
+.wolf-theme .wolf-scenario-score__caption>span{display:block;color:rgba(220,217,238,.42);font-size:9px;margin-top:4px;line-height:1.5}
+.wolf-theme .wolf-confidence{--wolf-visual-accent:#b4a4df;width:76px;height:76px;flex-shrink:0;position:relative;color:var(--wolf-visual-accent)}
+.wolf-theme .wolf-scenario .wolf-confidence{--wolf-visual-accent:inherit;color:inherit}
+.wolf-theme .wolf-confidence svg{width:100%;height:100%;overflow:visible;fill:none;stroke-width:3;transform:rotate(0deg)}
+.wolf-theme .wolf-confidence__track{stroke:rgba(197,190,222,.12)}
+.wolf-theme .wolf-scenario .wolf-confidence__value{stroke:var(--wolf-visual-accent,#d5b77f)}
+.wolf-theme .wolf-confidence__value{stroke:currentColor;stroke-linecap:round}
+.wolf-theme .wolf-confidence>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#e7e3ef;font-size:22px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-.05em}
+.wolf-theme .wolf-confidence small{font-size:10px;margin:4px 0 0 2px;letter-spacing:0;color:rgba(220,217,238,.55)}
+.wolf-theme .wolf-confidence.is-muted .wolf-confidence__track{stroke-dasharray:2 5}
+.wolf-theme .wolf-confidence.is-muted>span{color:rgba(220,217,238,.4)}
+.wolf-theme .wolf-sample-chart{display:block;width:100%;height:76px;margin:13px 0 0;color:var(--wolf-visual-accent);overflow:visible}
+.wolf-theme .wolf-sample-chart__grid{fill:none;stroke:rgba(210,204,229,.08);stroke-width:.7;stroke-dasharray:2 5}
+.wolf-theme .wolf-chart-caption{display:flex;justify-content:space-between;gap:6px;color:rgba(220,217,238,.36);font-size:8px;letter-spacing:.015em;line-height:1.5;margin-bottom:18px}
+.wolf-theme .wolf-scenario-reason{margin:0 -16px;border-top:1px solid rgba(203,196,235,.1);padding:0 16px}
+.wolf-theme .wolf-scenario-reason summary{display:flex;justify-content:space-between;gap:8px;padding:13px 0;list-style:none;font-size:10px;color:rgba(231,227,239,.65);cursor:pointer}
+.wolf-theme .wolf-scenario-reason summary::-webkit-details-marker{display:none}
+.wolf-theme .wolf-scenario-reason summary>span{color:var(--wolf-visual-accent);transition:transform .2s ease}
+.wolf-theme .wolf-scenario-reason[open] summary>span{transform:rotate(90deg)}
+.wolf-theme .wolf-scenario-reason p{font-size:11px;line-height:1.7;color:rgba(220,217,238,.6);margin:0 0 14px}
+.wolf-theme .wolf-scenario-reason strong{display:block;font-weight:500;color:rgba(231,227,239,.8)}
+.wolf-theme .wolf-research-signal{display:flex;align-items:center;gap:16px;padding:16px 12px;margin:12px 0 18px;background:rgba(159,146,203,.035);border:1px solid rgba(203,196,235,.1);border-radius:12px}
+.wolf-theme .wolf-research-signal strong{font-size:12px;font-weight:500;color:rgba(231,227,239,.84)}
+.wolf-theme .wolf-research-signal p{font-size:12px;color:rgba(220,217,238,.5);line-height:1.6;margin:6px 0 0}
+.wolf-theme .wolf-research-comparison{flex:1;min-width:0}.wolf-theme .wolf-research-comparison>strong{display:block;margin-bottom:13px}
+.wolf-theme .wolf-probability-row{margin-top:9px}.wolf-theme .wolf-probability-row>div{display:flex;justify-content:space-between;gap:12px;color:rgba(220,217,238,.55);font-size:10px}
+.wolf-theme .wolf-probability-row b{font-weight:400;font-variant-numeric:tabular-nums}
+.wolf-theme .wolf-probability-track{display:block;margin-top:6px;height:3px;background:rgba(197,190,222,.1);border-radius:4px;overflow:hidden}
+.wolf-theme .wolf-probability-track i{display:block;width:var(--wolf-probability);height:100%;background:#b4a4df;border-radius:inherit}
+.wolf-theme .wolf-probability-row:last-child i{background:#93cbbd}
+@container (max-width:650px){.wolf-theme .wolf-scenario-grid{grid-template-columns:1fr}.wolf-theme .wolf-scenario h4{min-height:0}.wolf-theme .wolf-scenario{padding:18px 20px 0}.wolf-theme .wolf-scenario-reason{margin:0 -20px;padding:0 20px}.wolf-theme .wolf-scenario-top{margin-bottom:14px}.wolf-theme .wolf-sample-chart{height:90px}}
+@media(max-width:650px){.wolf-theme .wolf-scenario-grid{grid-template-columns:1fr}.wolf-theme .wolf-scenario h4{min-height:0}.wolf-theme .wolf-showcase-heading h3{font-size:22px}}
+.wolf-theme .wolf-weekly-showcase{container-type:inline-size}

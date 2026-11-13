@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { AppHeader, PortalButton, PortalCell, PortalGrid, RecordList, RecordRow, FieldTable, AkIcon } from '../spatial-ui'
 import type { Activity, Draft, Market, Portfolio, Quote } from './types'
+import { WolfMark } from './WolfMark'
 
 export const money = (value: unknown) => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value))
 const cents = (value: string | number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(value) * 100)
@@ -27,7 +28,7 @@ export function WolfSurface(p: WolfSurfaceProps) {
   const positions = p.portfolio?.positions ?? []
   const subtitle = p.dataState === 'live' ? 'Live markets · Paper capital' : p.dataState === 'loading' ? 'Connecting to markets · Demo money' : 'Saved market data · Demo money'
   return <section className="wolf-surface wolf-theme" aria-label="Wolf prediction markets">
-    <div className="wolf-lane-header"><AppHeader title="Wolf Trader" eyebrow={subtitle} tone="violet" /></div>
+    <div className="wolf-lane-header wolf-lane-header--marked"><AppHeader title="Wolf Trader" eyebrow={subtitle} tone="violet" /><WolfMark /></div>
     <div className="wolf-content">
       {p.serviceError && <InlineMessage kind="error">{p.serviceError} <button className="wolf-text-action" onClick={p.onRefresh}>Retry</button></InlineMessage>}
       {p.notice && <div className="wolf-notice" role="status">{p.notice}</div>}

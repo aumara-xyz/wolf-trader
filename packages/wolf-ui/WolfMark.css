@@ -1,0 +1,47 @@
+.wolf-lane-header--marked { position: relative; }
+.wolf-theme .wolf-lane-header--marked > .ak-header { padding-inline-end: 74px; }
+.wolf-header-mark {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 17px;
+  display: block;
+  width: 66px;
+  height: 66px;
+  color: var(--ak-gold, #e0b76a);
+  pointer-events: none;
+}
+.wolf-mark { display: block; width: 100%; height: 100%; overflow: visible; }
+.wolf-mark__halo { opacity: .24; }
+.wolf-mark__head {
+  transform-origin: 48px 75px;
+  animation: wolf-mark-breathe 6s ease-in-out infinite;
+}
+.wolf-mark__eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wolf-mark-blink 9s ease-in-out infinite;
+}
+.wolf-mark__ear--left {
+  transform-origin: 32px 36px;
+  animation: wolf-mark-listen 13s ease-in-out infinite;
+}
+@keyframes wolf-mark-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-.6px) scale(1.012); }
+}
+@keyframes wolf-mark-blink {
+  0%, 43%, 47%, 100% { transform: scaleY(1); }
+  45% { transform: scaleY(.08); }
+}
+@keyframes wolf-mark-listen {
+  0%, 65%, 73%, 100% { transform: rotate(0); }
+  68% { transform: rotate(-3deg); }
+  71% { transform: rotate(1deg); }
+}
+@media (max-width: 600px) {
+  .wolf-theme .wolf-lane-header--marked > .ak-header { padding-inline-end: 64px; }
+  .wolf-header-mark { width: 58px; height: 58px; inset-block-start: 12px; inset-inline-end: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wolf-mark__head, .wolf-mark__eyes, .wolf-mark__ear--left { animation: none; }
+}
