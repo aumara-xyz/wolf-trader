@@ -173,7 +173,9 @@ export async function createWolfServer({ dataDir = process.env.WOLF_DATA_DIR || 
           if(request.authority)fail('AUTHORITY_FIELD_REFUSED','Authority is resolved by the service.',403);
           if(autonomy.status().mandate?.config.authority?.grantId===grantId)fail('GRANT_ALREADY_ARMED','This grant already armed a session. Sign fresh limits to rearm.',409);
           const resource=actionDigest(request);
-          authority.authorize({grantId,scope:'paper',resource,action:'arm',operationId:'arm:'+grantId,payload:request});
+          const permission={grantId,scope:'paper',resource,action:'arm',operationId:'arm:'+grantId,payload:request};
+          if(authority.check(permission).consumed)fail('GRANT_ALREADY_ARMED','This grant already armed a session. Sign fresh limits to rearm.',409);
+          authority.authorize(permission);
           const result=await autonomy.arm({...request,authority:{grantId,resource}});refreshResearch();return send(res,200,result);
         }
         if (req.method === 'POST' && route === 'autonomy/pause') return send(res, 200, autonomy.pause());

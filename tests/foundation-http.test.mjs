@@ -77,3 +77,17 @@ test('arming while a manual paper order awaits its book blocks the final manual 
   assert.ok(records.some(record => record.kind === 'autonomy.armed')); assert.equal(records.some(record => record.kind === 'execution.manual-paper'), false);
   await Promise.all([f.app.close(), f.app.close()]);
 });
+
+
+test('an older paper grant cannot be reused after a different mandate replaced it',async t=>{
+ const f=await fixture(t),{privateKey,publicKey}=generateKeyPairSync('ec',{namedCurve:'P-256'});
+ const approve=async input=>{const c=await f.post('authority/challenge',input);return f.post('authority/complete',{challengeId:c.data.id,signature:sign('sha256',Buffer.from(c.data.signingText),{key:privateKey,dsaEncoding:'ieee-p1363'}).toString('base64url')});};
+ await approve({action:'enroll',publicKeyJwk:publicKey.export({format:'jwk'})});
+ const request={capitalMode:'DEMO',strategy:'quote-momentum/v1',marketIds:['100'],perOrder:'10',maxExposure:'50',intervalSeconds:60};
+ const prepare=await f.post('authority/prepare',{request});
+ const a=(await approve({action:'grant',terms:prepare.data.terms})).data.grant.id;
+ assert.equal((await f.post('autonomy/arm',{...request,grantId:a})).status,200);await f.post('autonomy/stop');
+ const b=(await approve({action:'grant',terms:prepare.data.terms})).data.grant.id;
+ assert.equal((await f.post('autonomy/arm',{...request,grantId:b})).status,200);await f.post('autonomy/stop');
+ const repeated=await f.post('autonomy/arm',{...request,grantId:a});assert.equal(repeated.status,409);assert.equal(repeated.data.error.code,'GRANT_ALREADY_ARMED');assert.equal((await f.get('autonomy')).phase,'stopped');
+});
