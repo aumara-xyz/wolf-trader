@@ -18,7 +18,7 @@ export function WeeklyDeskPortals({client,onMarkets,onAskAuma,onOpenMarket,owner
  useEffect(()=>{const markets=candidates.map(c=>c.market).filter((m):m is Market=>Boolean(m?.id));if(markets.length)onMarkets(markets)},[book?.id,onMarkets])
  const action=async(name:string,work:()=>Promise<unknown>)=>{if(busy)return;setBusy(name);setError('');setNotice('');try{const value=await work();await refresh();return value}catch(e){setError(errorText(e))}finally{setBusy('')}}
  const paperCandidates=candidates.filter(c=>c.experimentalPaperEligible===true&&c.forecast?.probability!=null)
- return <div className="wolf-weekly-desk">
+ return <div className="wolf-foundation wolf-weekly-desk">
  {error&&<p className="wolf-inline-message is-error" role="alert">{error}</p>}{notice&&<p className="wolf-notice" role="status">{notice}</p>}
  <PortalGrid open={false}>
  <PortalCell><PortalButton title="This Week" icon="aura" tone="violet" summary={running?desk?.job?.stage??'Research in progress':book?`${candidates.length} researched candidates`:'Your research, forecasts and counterarguments'} expanded={open==='week'} onToggle={()=>setOpen(open==='week'?'':'week')}>
