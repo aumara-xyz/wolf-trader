@@ -24,7 +24,7 @@ for (let i=0;i<args.length;i++) {
   else throw Error(`Unknown setup option: ${a}`);
 }
 if (flags.has('--help')) {
-  console.log('node scripts/setup-intelligence.mjs [--kronos --laya --dexter --nautilus] [--verify] [--runtime-dir DIR] [--laya-model-dir DIR]\nNo provider flags installs all four free local providers. Prerequisites: Node 22+, uv, Bun, Ollama. The default path is outside Git. Models total about 2.3 GB plus Python dependencies. No API keys or accounts are read. --verify runs real local inference with public Coinbase observations and a clearly marked classification fixture. Jev is a separately configured hosted API and is never called by setup.');
+  console.log('node scripts/setup-intelligence.mjs [--kronos --laya --dexter --nautilus] [--verify] [--runtime-dir DIR] [--laya-model-dir DIR]\nNo provider flags installs all four free local providers. Prerequisites: Node 24.9+, uv, Bun, Ollama. The default path is outside Git. Models total about 2.3 GB plus Python dependencies. No API keys or accounts are read. --verify runs real local inference with public Coinbase observations and a clearly marked classification fixture. Jev is a separately configured hosted API and is never called by setup.');
   process.exit(0);
 }
 const selected = ['--python','--kronos','--laya','--dexter','--nautilus'].some(f=>flags.has(f));

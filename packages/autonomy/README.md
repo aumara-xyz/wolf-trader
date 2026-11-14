@@ -12,9 +12,12 @@ The service persists mandates, observations, intent reservations, decisions and 
 | --- | --- | --- |
 | `quote-momentum/v1` | Compare two fresh observations of an outcome's executable quotes; enter a bounded position after the configured positive move, exit after a holding period or configured adverse/profit move. | Experimental baseline. Volume, quote direction and relevance are not independently estimated win probabilities. |
 | `kronos-direction/v1` | Consume an actual underlying-price forecast, compare its terminal price with an explicitly approved contract threshold plus a directional cushion, and propose a bounded paper position. | Exact owner-approved outcome, strike, symbol, horizon, model artifact and rule version must match. No conversion to event probability. A named-price forecast does not automatically apply to a similarly worded contract. |
+| `weekly-hypothesis/v1` | Consume an eligible, non-abstaining signal from one exact frozen weekly book, compare its uncalibrated opinion with the executable entry price and apply the bounded paper strategy. | Explicitly experimental. Requires the selected book, current signed signal, model digest, source/rule bindings and owner-signed limits. It is separate from calibrated probability promotion. |
 | `forecast-edge/v1` | Compare an approved event-probability artifact with the current executable price and a minimum edge threshold. | Requires a server-owned promotion record with a pinned calibration report. No approved artifact is supplied by default. A signal's own `calibrated` claim cannot authorize this path. |
 
-All three use the same independent paper governor. Strategy output never adjusts capital limits. Probability approval, mapping approval and the exact signal are checked again synchronously immediately before the ledger effect. A withdrawn signal, revoked mapping, changed rule, expired mandate, changed account, widened spread or stale valuation refuses that effect.
+All four use the same independent paper governor. Strategy output never adjusts capital limits. The relevant probability approval, mapping approval or weekly signal, plus current owner authority, are checked again synchronously immediately before the ledger effect. A withdrawn signal, revoked mapping/grant, changed rule, expired mandate, changed account, widened spread or stale valuation refuses that effect. Shared holding-period/profit/adverse-move exits remain simulated and require executable liquidity.
+
+In the current app, the separate browser owner key signs exact grant terms through `authority/challenge` and `authority/complete`. `authority/prepare` binds paper limits to a resource digest before `autonomy/arm` verifies and consumes the arm permission. A stopped or restarted session needs a fresh signed grant to rearm. Browser-key possession is not hardware or human-presence attestation; research workers receive no signing key.
 
 ## Host wiring
 
@@ -28,6 +31,7 @@ const autonomy = createAutonomyService({
   readSignals, // synchronous current server-owned signal snapshot
   approvedMappings, // synchronous owner-approved exact mapping lookup
   approvedForecasts, // synchronous approved probability artifact lookup
+  authorityGate, // current host checks/consumes exact owner-grant permission
 });
 autonomy.start(); // starts the scheduler; does not arm a session
 ```

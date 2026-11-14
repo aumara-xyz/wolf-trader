@@ -13,7 +13,7 @@ These are executable upstream integrations. They do not receive an order signer,
 
 ## Setup
 
-Prerequisites: Node 22+, [uv](https://docs.astral.sh/uv/getting-started/installation/), [Bun](https://bun.sh/docs/installation), [Ollama](https://docs.ollama.com/quickstart), and Git. macOS arm64 is the observed platform. Other supported Python wheel platforms require verification on their own machine.
+Prerequisites: Node 24.9+, [uv](https://docs.astral.sh/uv/getting-started/installation/), [Bun](https://bun.sh/docs/installation), [Ollama](https://docs.ollama.com/quickstart), and Git. Setup provisions a Python 3.12 environment through `uv`. macOS arm64 is the observed platform. Other supported Python wheel platforms require verification on their own machine.
 
 ```sh
 npm run wolf:setup

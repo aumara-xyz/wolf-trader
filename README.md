@@ -4,9 +4,26 @@ Wolf Trader 0.3 is a standalone AUKORA trading foundation: public market researc
 
 The implemented loop is **observe → recall → investigate → record → propose → enforce a standing paper mandate → simulate → evaluate**. Research and model output cannot change the mandate's capital limits. This repository runs independently of the full Genesis/X1/X2/X6 checkout; selected AUKORA source closures, pins and notices are included.
 
+For a trading-industry review, start with [the reviewer guide](./docs/TRADER_REVIEW.md). The strongest proposition is an inspectable, permissioned research-to-execution system: preserve what the bot knew, what it proposed, what the owner allowed and what actually happened. It records source snapshots and stated rationales; it does not expose or prove a model's private internal reasoning. Predictive edge and execution speed still have to be measured.
+
+![Wolf Trader weekly outlook preview](./docs/assets/wolf-weekly-outlook.jpg)
+
+*Illustrative UI preview: the three labelled sample scenarios, confidence scores and charts are scripted content, not live forecasts or performance evidence.*
+
+## What you can review today
+
+| Area | Current behavior |
+| --- | --- |
+| Public markets and paper account | Canonical Polymarket contracts, executable public books, quote previews and a durable simulated ledger. Unsupported markets are browse-only. |
+| This Week sample gallery | Three labelled, scripted scenarios with illustrative confidence wheels and charts. These are not live picks, model results or market history; they never enter a research book or account. |
+| Real weekly research | A separate, explicitly launched book using installed local specialists. Retains every candidate, pass, error, source cutoff, forecast and opposing case. Estimates are uncalibrated. |
+| Owner authority and automation | Browser-signed, revocable permissions and a deterministic paper governor. Once armed, eligible actions need no per-trade approval. |
+| Evidence and evaluation | Signed, segmented records, independent verification, official-resolution scorecards and control challenges. These do not establish profitable performance. |
+| Not supplied | Live-money execution, wallets/custody, proven alpha, production multi-user model hosting, relay distribution, full Scion evolution or full X6 host integration. |
+
 ## Run it
 
-Requires Node **24.9+**, npm and an authorized GitHub account for this private repository.
+Requires Node **24.9+**, npm, Git and public network access. You do not need Genesis, X1, X2 or X6 repository access, a model API key or trading credentials for the local starting path.
 
 ```sh
 git clone https://github.com/aumara-xyz/wolf-trader.git
@@ -18,7 +35,7 @@ npm run wolf:start
 
 Open **http://127.0.0.1:4328/**. Public market access, paper accounts, memory/evidence and the quote strategy work without model keys. Missing specialist installations appear as unavailable.
 
-To install the free local specialists, first install `uv`, Bun and Ollama, with Git available. Setup downloads pinned models and dependencies outside the repository; allow several GB of disk space and additional space for Python packages.
+To install the free local specialists, first install `uv`, Bun and Ollama, with Git available. Setup creates a Python 3.12 environment through `uv` and downloads pinned models and dependencies outside the repository. Model artifacts total about 2.3 GB; allow additional disk space for Python dependencies. macOS arm64 is the observed platform; other platforms need their own dependency and runtime verification.
 
 ```sh
 npm run wolf:setup
@@ -26,6 +43,8 @@ npm run wolf:setup -- --verify
 ```
 
 Verification executes actual local models and replay. It uses public Coinbase candles plus an explicitly labeled classification fixture; it does not measure trading skill. Setup never calls the paid Jev API. Run `npm run wolf:setup -- --help` for individual providers and an alternate runtime directory.
+
+A Jev key enables one optional hosted judgment provider only after paid calls are explicitly enabled. It does not install the local specialists, calibrate event forecasts, deploy a public backend or enable real orders. Use the provider status shown by the running app to distinguish installed artifacts from a successful inference in that process.
 
 For the macOS application, install Apple's command-line developer tools, then:
 
@@ -82,10 +101,12 @@ Optional arguments are an independently known public key and a retained-head JSO
 
 Evidence is now stored in linked signed segments, with a default 128 receipts per segment and no 4,096-receipt operational ceiling. Existing histories migrate without rewriting signed events. Full exports are bounded at 64 MB; larger histories use the manifest and bounded segment routes under `intelligence/evidence`. Independently retain a checkpoint to detect rollback relative to what you previously observed. Evidence failure before a paper effect refuses it; failure after an effect pauses without pretending the effect rolled back.
 
-Trading uses simulated funds on supported, verified zero-fee binary markets. Unsupported markets remain browse-only. There are no wallet keys, live-fund submission routes, automatic final settlement, or proven profitable strategies. Replay has explicit liquidity/fee/model assumptions and cannot establish live execution quality. Full X6 host integration, public multi-user hosting and relay distribution remain separate work.
+Trading uses simulated funds on supported, verified zero-fee binary markets. Unsupported markets remain browse-only. There are no wallet keys, live-fund submission routes, automatic final settlement, or proven profitable strategies. Replay has explicit liquidity/fee/model assumptions and cannot establish live execution quality. Full X6 host integration, hosted multi-user model services and relay distribution remain separate work.
 
 
 ## Weekly research desk
+
+The labelled sample outlook is a presentation preview. Its fixed examples have no market IDs, order actions or performance records. The real research controls below it create a separate prospective book; sample confidence scores must never be presented as evidence that those controls or models ran.
 
 The **This Week** portal freezes a bounded universe, investigates every candidate through the actual specialist pipeline, and asks the pinned local Qwen model for an explicit event forecast with cited evidence, rationale, opposing case and invalidation conditions. Every candidate remains visible as a pick, watchlist item or pass. These are uncalibrated model estimates. Discovery cutoff, later source-information cutoffs and forecast issue times are distinct; resolved or changed contracts cannot be silently researched in hindsight.
 
@@ -114,4 +135,4 @@ npm run wolf:build
 
 Embed [WolfApp](./packages/wolf-ui/WolfApp.tsx) in the host's center slot and connect its callbacks to the resident Auma. The [website integration handoff](./docs/WOLF_WEBSITE_INTEGRATION.md) describes that host boundary. A public site needs its own authenticated, isolated service deployment and cannot use a visitor's localhost as a backend.
 
-Retain third-party notices when sharing or modifying this private repository. Included Spatial/legacy engine closures retain their AGPL notices; the AUKORA intelligence closure, Cordis, model workers and providers retain their respective licenses. Private access does not replace those terms.
+Retain third-party notices when sharing or modifying this repository. Included Spatial/legacy engine closures retain their AGPL notices; the AUKORA intelligence closure, Cordis, model workers and providers retain their respective licenses. Repository visibility does not replace those terms. See the [review priorities and next additions](./docs/TRADER_REVIEW.md#build-next-in-this-order) before treating more model integrations as the next milestone.
