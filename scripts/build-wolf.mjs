@@ -16,7 +16,7 @@ async function collect(dir) {
     else files.push(relative);
   }
 }
-for (const dir of ['apps/desk', 'apps/service', 'apps/macos', 'packages/wolf-ui', 'packages/wolf-core', 'packages/spatial-ui', 'packages/aukora', 'packages/aukora-vendor', 'packages/providers', 'packages/autonomy', 'packages/intelligence', 'packages/weekly', 'packages/authority', 'packages/runtime', 'packages/runtime-vendor', 'workers']) await collect(dir);
+for (const dir of ['apps/desk', 'apps/service', 'apps/macos', 'packages/wolf-ui', 'packages/wolf-core', 'packages/scenario-lab', 'packages/spatial-ui', 'packages/aukora', 'packages/aukora-vendor', 'packages/providers', 'packages/autonomy', 'packages/intelligence', 'packages/weekly', 'packages/authority', 'packages/runtime', 'packages/runtime-vendor', 'workers']) await collect(dir);
 const digest = createHash('sha256');
 for (const file of files.sort()) digest.update(file).update('\0').update(await readFile(path.join(root, file))).update('\0');
 const sourceSha256 = digest.digest('hex');

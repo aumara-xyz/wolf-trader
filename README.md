@@ -8,6 +8,8 @@ For a trading-industry review, start with [the reviewer guide](./docs/TRADER_REV
 
 The [Robin Hood research commons specification](./docs/ROBIN_HOOD_RESEARCH_COMMONS_SPEC.md) proposes authorized event feeds, System One assessments, signed group research and independently governed paper portfolios. It is a design handoff, not an activated feed, relay network or live-money trading feature.
 
+**[Parallel Futures](./docs/SCENARIO_LAB.md)** demonstrates that direction interactively: three fictional events, branching scenarios, authored agent disagreement, editable limits and actual ephemeral browser-signed demo receipts with a tamper check. It runs locally without model keys and stays outside the research records, owner permissions and paper ledger.
+
 ![Wolf Trader weekly outlook preview](./docs/assets/wolf-weekly-outlook.jpg)
 
 *Illustrative UI preview: the three labelled sample scenarios, confidence scores and charts are scripted content, not live forecasts or performance evidence.*
